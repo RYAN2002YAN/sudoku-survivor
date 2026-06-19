@@ -372,8 +372,8 @@ function spawnIceWall(playerTileX, playerTileY, lastMoveDir, tileMap, iceWalls, 
 
 // ---- Wrong Answer Speed Boost ----
 
-let wrongAnswerBoostActive = false;
-let wrongAnswerBoostTimer = 0;
+var wrongAnswerBoostActive = false;
+var wrongAnswerBoostTimer = 0;
 
 /**
  * Apply a temporary speed boost to all monsters (doubles their speed).
