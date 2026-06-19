@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sudoku Survivor</title>
+  <style>
+    /* ============================================================
+       RESET & BASE
+       ============================================================ */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: #0a0a14;
+      color: #e0e0e0;
+      font-family: 'Courier New', 'SF Mono', 'Fira Code', monospace;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* ============================================================
+       GAME WRAPPER
+       ============================================================ */
+    #game-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px;
+      background: #12121f;
+      border: 2px solid #2a2a4a;
+      border-radius: 8px;
+      box-shadow: 0 0 40px rgba(80, 80, 200, 0.15);
+    }
+
+    /* ============================================================
+       TOP BAR
+       ============================================================ */
+    #top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 16px;
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
+      border-radius: 4px;
+      font-size: 14px;
+      gap: 16px;
+    }
+
+    #top-bar .stat {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #top-bar .stat-label {
+      color: #888;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 1px;
+    }
+
+    #top-bar .stat-value {
+      color: #0f0;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    #lives-display { color: #ff4757; font-size: 18px; letter-spacing: 2px; }
+    #score-display { color: #ffd700; }
+    #level-display { color: #7bed9f; }
+    #timer-display { color: #70a1ff; }
+
+    /* ============================================================
+       MAIN GAME AREA
+       ============================================================ */
+    #game-main {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    /* ---- Dungeon Panel ---- */
+    #dungeon-panel {
+      flex: 0 0 auto;
+      position: relative;
+    }
+
+    #game-canvas {
+      display: block;
+      border: 2px solid #2a2a4a;
+      border-radius: 4px;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    /* ---- Sudoku Panel ---- */
+    #sudoku-panel {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
+      border-radius: 4px;
+      min-width: 300px;
+    }
+
+    #sudoku-panel h3 {
+      font-size: 13px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin: 0;
+    }
+
+    /* Sudoku grid table */
+    #sudoku-grid {
+      border-collapse: collapse;
+      border: 2px solid #888;
+    }
+
+    #sudoku-grid td {
+      width: 44px;
+      height: 44px;
+      text-align: center;
+      vertical-align: middle;
+      font-size: 22px;
+      font-weight: bold;
+      cursor: pointer;
+      border: 1px solid #444;
+      background: #1e1e34;
+      color: #e0e0e0;
+      transition: background 0.1s, border-color 0.1s;
+    }
+
+    #sudoku-grid td:hover {
+      background: #2a2a44;
+    }
+
+    #sudoku-grid td.given {
+      color: #888;
+      cursor: default;
+      background: #161630;
+    }
+
+    #sudoku-grid td.selected {
+      background: #2a3a5a;
+      border-color: #7eb8ff;
+      box-shadow: inset 0 0 8px rgba(126, 184, 255, 0.3);
+    }
+
+    #sudoku-grid td.wrong-flash {
+      animation: wrongShake 0.4s ease;
+      background: #4a2020;
+      border-color: #ff4757;
+      color: #ff4757;
+    }
+
+    #sudoku-grid td.correct-flash {
+      animation: correctPulse 0.4s ease;
+      background: #1a3a1a;
+      border-color: #2ecc71;
+    }
+
+    /* Thick box borders */
+    #sudoku-grid tr.box-border-bottom td {
+      border-bottom: 2px solid #aaa;
+    }
+    #sudoku-grid td.box-border-right {
+      border-right: 2px solid #aaa;
+    }
+
+    @keyframes wrongShake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-4px); }
+      40% { transform: translateX(4px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+
+    @keyframes correctPulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+      100% { transform: scale(1); }
+    }
+
+    /* Number pad */
+    #number-pad {
+      display: flex;
+      gap: 6px;
+    }
+
+    .num-btn {
+      width: 42px;
+      height: 42px;
+      font-size: 18px;
+      font-weight: bold;
+      font-family: inherit;
+      background: #2a2a4a;
+      color: #e0e0e0;
+      border: 1px solid #444;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.1s, transform 0.05s;
+    }
+
+    .num-btn:hover {
+      background: #3a3a5a;
+    }
+
+    .num-btn:active {
+      transform: scale(0.93);
+      background: #1a1a3a;
+    }
+
+    /* Sudoku stats */
+    #sudoku-status {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: #888;
+    }
+
+    #sudoku-status .done { color: #2ecc71; }
+
+    /* ============================================================
+       OVERLAYS
+       ============================================================ */
+    #overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.82);
+      border-radius: 4px;
+      pointer-events: all;
+      z-index: 10;
+    }
+
+    #overlay.hidden { display: none; }
+
+    #overlay h1 {
+      font-size: 28px;
+      color: #ffd700;
+      margin-bottom: 8px;
+      letter-spacing: 2px;
+    }
+
+    #overlay h2 {
+      font-size: 22px;
+      margin-bottom: 12px;
+      letter-spacing: 1px;
+    }
+
+    #overlay .subtitle {
+      font-size: 13px;
+      color: #aaa;
+      margin-bottom: 20px;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    #overlay .key-hint {
+      font-size: 16px;
+      color: #7bed9f;
+      animation: blink 1.2s ease-in-out infinite;
+    }
+
+    /* Difficulty selector */
+    .difficulty-selector {
+      display: flex;
+      gap: 8px;
+      margin: 10px 0;
+    }
+    .difficulty-btn {
+      padding: 6px 14px;
+      font-size: 13px;
+      font-family: inherit;
+      background: rgba(255,255,255,0.06);
+      color: #aaa;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .difficulty-btn:hover {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+    }
+    .difficulty-btn.active {
+      background: rgba(126,184,255,0.2);
+      border-color: #7eb8ff;
+      color: #7eb8ff;
+      font-weight: bold;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Game Over specific */
+    #overlay.gameover h2 { color: #ff4757; }
+    #overlay.levelclear h2 { color: #2ecc71; }
+
+    /* ============================================================
+       EFFECT LOG (bottom of sudoku panel)
+       ============================================================ */
+    #effect-log {
+      font-size: 11px;
+      color: #aaa;
+      text-align: center;
+      min-height: 18px;
+      transition: color 0.2s;
+    }
+    #effect-log.ice { color: #7eb8ff; }
+    #effect-log.lightning { color: #ffd700; }
+    #effect-log.freeze { color: #3498db; }
+    #effect-log.boost { color: #ff4757; }
+
+    /* ============================================================
+       VIRTUAL D-PAD (touch devices)
+       ============================================================ */
+    #touch-controls {
+      display: none; /* Hidden by default, shown on touch devices */
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    #touch-controls .dpad-btn {
+      position: absolute;
+      width: 52px;
+      height: 52px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    #touch-controls .dpad-btn:active {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    #dpad-up    { top: 0;    left: 56px; }
+    #dpad-down  { top: 108px; left: 56px; }
+    #dpad-left  { top: 54px; left: 0;    }
+    #dpad-right { top: 54px; left: 112px; }
+
+    /* Mute button */
+    #mute-btn {
+      background: none;
+      border: 1px solid #444;
+      color: #888;
+      font-size: 14px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: inherit;
+    }
+    #mute-btn:hover { color: #fff; border-color: #888; }
+    #mute-btn.muted { color: #ff4757; border-color: #ff4757; }
+
+    /* ============================================================
+       RESPONSIVE: Mobile / Narrow Screens
+       ============================================================ */
+    @media (max-width: 750px) {
+      body {
+        align-items: flex-start;
+        padding: 4px;
+      }
+
+      #game-wrapper {
+        padding: 8px;
+        gap: 8px;
+        width: 100%;
+        max-width: 400px;
+      }
+
+      #top-bar {
+        font-size: 12px;
+        gap: 8px;
+        padding: 6px 10px;
+      }
+      #top-bar .stat-value { font-size: 13px; }
+      #top-bar .stat-label { font-size: 9px; }
+
+      #game-main {
+        flex-direction: column;
+        gap: 10px;
+        align-items: center;
+      }
+
+      /* Scale canvas to fit */
+      #dungeon-panel {
+        width: 100%;
+        max-width: 352px;
+      }
+      #game-canvas {
+        width: 100%;
+        height: auto;
+      }
+
+      /* Larger sudoku touch targets */
+      #sudoku-grid td {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+      }
+      .num-btn {
+        width: 38px;
+        height: 38px;
+        font-size: 16px;
+      }
+
+      #sudoku-panel {
+        min-width: unset;
+        width: 100%;
+        max-width: 352px;
+      }
+
+      /* Show touch D-pad */
+      #touch-controls {
+        display: block;
+      }
+
+      /* Smaller overlay text on mobile */
+      #overlay h1 { font-size: 20px; }
+      #overlay h2 { font-size: 18px; }
+      #overlay .subtitle { font-size: 11px; margin-bottom: 14px; }
+      #overlay .key-hint { font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="game-wrapper">
+    <!-- Top bar -->
+    <header id="top-bar">
+      <div class="stat">
+        <span class="stat-label" data-i18n="stat.lives">生命</span>
+        <span id="lives-display">♥♥♥</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label" data-i18n="stat.score">分数</span>
+        <span id="score-display" class="stat-value">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label" data-i18n="stat.level">关卡</span>
+        <span id="level-display" class="stat-value">1</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label" data-i18n="stat.time">时间</span>
+        <span id="timer-display" class="stat-value">0:00</span>
+      </div>
+      <button id="mute-btn" data-i18n-title="mute.title" title="切换音效">🔊</button>
+      <button id="lang-btn" data-i18n-title="lang.title" title="切换语言">🌐</button>
+    </header>
+
+    <!-- Main game area -->
+    <main id="game-main">
+      <!-- Dungeon canvas panel -->
+      <div id="dungeon-panel">
+        <canvas id="game-canvas" width="352" height="352"></canvas>
+        <!-- Virtual D-pad for touch devices -->
+        <div id="touch-controls">
+          <button class="dpad-btn" id="dpad-up"   data-dir="up">▲</button>
+          <button class="dpad-btn" id="dpad-down" data-dir="down">▼</button>
+          <button class="dpad-btn" id="dpad-left" data-dir="left">◀</button>
+          <button class="dpad-btn" id="dpad-right" data-dir="right">▶</button>
+        </div>
+        <div id="overlay" class="">
+          <h1 data-i18n="menu.title">数独<br>逃生</h1>
+          <div class="subtitle" data-i18n="menu.subtitle">一边躲避地牢怪物<br>一边解开 6×6 数独。<br><br><b>完成一行</b> → 身后生成冰墙<br><b>完成一列</b> → 眩晕最近怪物<br><b>完成一宫</b> → 冻结全部怪物<br><b style="color:#ff4757;">填入错误</b> → 怪物加速！</div>
+          <div class="key-hint" data-i18n="menu.start">按 空格键 开始</div>
+        </div>
+      </div>
+
+      <!-- Sudoku panel -->
+      <div id="sudoku-panel">
+        <h3 data-i18n="sudoku.label">🔢 数独</h3>
+        <table id="sudoku-grid">
+          <!-- Dynamically generated -->
+        </table>
+        <div id="number-pad">
+          <button class="num-btn" data-value="1">1</button>
+          <button class="num-btn" data-value="2">2</button>
+          <button class="num-btn" data-value="3">3</button>
+          <button class="num-btn" data-value="4">4</button>
+          <button class="num-btn" data-value="5">5</button>
+          <button class="num-btn" data-value="6">6</button>
+        </div>
+        <div id="sudoku-status">
+          <span><span data-i18n="sudoku.rows">行</span> <span id="rows-done">0</span>/6</span>
+          <span><span data-i18n="sudoku.cols">列</span> <span id="cols-done">0</span>/6</span>
+          <span><span data-i18n="sudoku.boxes">宫</span> <span id="boxes-done">0</span>/6</span>
+        </div>
+        <div id="effect-log"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Game constants (shared across all scripts) -->
+  <script>
+    const TILE_SIZE = 32;
+    const MAP_ROWS = 11;
+    const MAP_COLS = 11;
+    const FIXED_TIMESTEP = 1 / 30; // 30 Hz game update
+    const MAX_FRAME_TIME = 1 / 10;  // Prevent spiral of death
+  </script>
+
+  <!-- Game scripts -->
+  <script src="sudoku.js"></script>
+  <script src="monsters.js"></script>
+  <script src="sound.js"></script>
+  <script src="bgm.js"></script>
+  <script src="i18n.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

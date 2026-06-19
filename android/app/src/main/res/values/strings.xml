@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Sudoku Survivor</string>
+    <string name="title_activity_main">Sudoku Survivor</string>
+    <string name="package_name">com.sudokusurvivor.game</string>
+    <string name="custom_url_scheme">com.sudokusurvivor.game</string>
+</resources>

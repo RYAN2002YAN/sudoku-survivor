@@ -1,0 +1,26 @@
+{
+  "name": "sudoku-survivor",
+  "version": "1.0.0",
+  "description": "实时地牢逃亡 × 数独解谜 — WASD躲避怪物，边跑边解6×6数独",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python3 -m http.server 8080",
+    "sync": "cp index.html sudoku.js monsters.js sound.js bgm.js i18n.js game.js www/ && npx cap sync",
+    "ios": "npm run sync && npx cap open ios",
+    "android": "npm run sync && npx cap open android"
+  },
+  "keywords": [
+    "game",
+    "sudoku",
+    "dungeon",
+    "puzzle"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/cli": "^8.4.1",
+    "@capacitor/core": "^8.4.1",
+    "@capacitor/ios": "^8.4.1"
+  }
+}

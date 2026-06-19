@@ -1,0 +1,11 @@
+{
+  "appId": "com.sudokusurvivor.game",
+  "appName": "Sudoku Survivor",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "ios": {
+    "contentInset": "automatic"
+  }
+}

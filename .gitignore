@@ -1,3 +1,20 @@
+# Dependencies
+node_modules/
+
+# Capacitor native build outputs
+ios/DerivedData/
+ios/App/Pods/
+ios/App.xcworkspace/
+android/app/build/
+android/.gradle/
+android/build/
+android/capacitor-cordova-android-plugins/
+android/local.properties
+
+# Environment
+.env
+.env.local
+
 # OS files
 .DS_Store
 Thumbs.db
@@ -8,13 +25,9 @@ Thumbs.db
 *.swp
 *.swo
 
-# Dependencies (if added later)
-node_modules/
-
 # Build output (if added later)
 dist/
 build/
 
-# Environment
-.env
-.env.local
+# Dev sync — www is copied from root during development
+# www/ files are committed (needed by Capacitor)
