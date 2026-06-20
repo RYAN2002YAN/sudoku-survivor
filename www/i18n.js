@@ -50,6 +50,7 @@ Wrong answer → Monsters speed up!`,
       'effect.clear': '🎉 Puzzle solved! Level cleared!',
 
       // Mute button
+      'esc.menu': 'ESC for menu',
       'mute.title': 'Toggle sound',
       'lang.title': 'Switch language',
     },
@@ -97,6 +98,7 @@ Wrong answer → Monsters speed up!`,
       'effect.clear': '🎉 数独解决！关卡通关！',
 
       // 按钮
+      'esc.menu': 'ESC 返回菜单',
       'mute.title': '切换音效',
       'lang.title': '切换语言',
     },

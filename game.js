@@ -340,11 +340,15 @@ function handleKeyDown(e) {
   }
 
   // Space: start game / next level
-  if (e.code === 'Space') {
+  if (e.code === 'Space' || e.key === ' ' || e.keyCode === 32) {
     if (game.state === 'menu') {
-      SoundManager.init(); // Unlock audio context
-      BGM.start('playing');
-      startLevel(1);
+      try {
+        SoundManager.init();
+        BGM.start('playing');
+        startLevel(1);
+      } catch (err) {
+        console.error('[SudokuSurvivor] Space handler error:', err);
+      }
     }
     return;
   }
@@ -371,8 +375,29 @@ function handleKeyDown(e) {
     return;
   }
 
-  // Escape: deselect
+  // Escape: back to menu (quit current game)
   if (e.code === 'Escape') {
+    if (game.state === 'playing') {
+      // Quit to menu — lose progress
+      BGM.setScene('menu');
+      stopAllGameTimers();
+      game.state = 'menu';
+      game.tileMap = null;
+      hideOverlay();
+      buildMenuOverlay();
+      return;
+    }
+    if (game.state === 'gameover' || game.state === 'levelclear') {
+      // Go back to menu from game over / level clear
+      stopAllGameTimers();
+      game.state = 'menu';
+      game.tileMap = null;
+      hideOverlay();
+      buildMenuOverlay();
+      BGM.setScene('menu');
+      return;
+    }
+    // Default: deselect Sudoku cell
     game.selectedCell = { row: -1, col: -1 };
     renderSudoku();
     return;
@@ -449,52 +474,57 @@ function getCurrentDirection() {
 // ---- Initialization ----
 
 function init() {
-  game.canvas = document.getElementById('game-canvas');
-  game.ctx = game.canvas.getContext('2d');
-  game.ctx.imageSmoothingEnabled = false;
+  try {
+    game.canvas = document.getElementById('game-canvas');
+    game.ctx = game.canvas.getContext('2d');
+    game.ctx.imageSmoothingEnabled = false;
 
-  // Input listeners
-  document.addEventListener('keydown', handleKeyDown);
-  document.addEventListener('keyup', handleKeyUp);
+    // Input listeners
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
 
-  // Mute button (toggles both SFX and BGM)
-  const muteBtn = document.getElementById('mute-btn');
-  muteBtn.addEventListener('click', () => {
-    const sfxMuted = SoundManager.toggleMute();
-    const bgmMuted = BGM.toggleMute();
-    const allMuted = sfxMuted && bgmMuted; // Both toggled
-    muteBtn.textContent = allMuted ? '🔇' : '🔊';
-    if (allMuted) muteBtn.classList.add('muted');
-    else muteBtn.classList.remove('muted');
-  });
+    // Mute button (toggles both SFX and BGM)
+    var muteBtn = document.getElementById('mute-btn');
+    if (muteBtn) muteBtn.addEventListener('click', function () {
+      var sfxMuted = SoundManager.toggleMute();
+      var bgmMuted = BGM.toggleMute();
+      var allMuted = sfxMuted && bgmMuted;
+      muteBtn.textContent = allMuted ? '🔇' : '🔊';
+      if (allMuted) muteBtn.classList.add('muted');
+      else muteBtn.classList.remove('muted');
+    });
 
-  // Language toggle button
-  const langBtn = document.getElementById('lang-btn');
-  langBtn.addEventListener('click', () => {
-    I18n.toggleLang();
-    langBtn.textContent = I18n.getLang() === 'zh' ? '中' : 'EN';
-    // Rebuild overlay if visible
-    if (game.state === 'menu') buildMenuOverlay();
-    else if (game.state === 'gameover') showGameOverOverlay();
-    else if (game.state === 'levelclear') buildLevelClearOverlay();
-  });
+    // Language toggle button
+    var langBtn = document.getElementById('lang-btn');
+    if (langBtn) langBtn.addEventListener('click', function () {
+      I18n.toggleLang();
+      langBtn.textContent = I18n.getLang() === 'zh' ? '中' : 'EN';
+      if (game.state === 'menu') buildMenuOverlay();
+      else if (game.state === 'gameover') showGameOverOverlay();
+      else if (game.state === 'levelclear') buildLevelClearOverlay();
+    });
 
-  // Virtual D-pad for touch devices
-  setupTouchControls();
+    // Virtual D-pad for touch devices
+    setupTouchControls();
 
-  // Build dynamic UI
-  configureSudokuEngine(game.gridSize);
-  buildSudokuTable();
-  buildNumberPad();
-  game.completed = makeCompletedArrays(game.gridSize);
+    // Build dynamic UI
+    configureSudokuEngine(game.gridSize);
+    buildSudokuTable();
+    buildNumberPad();
+    game.completed = makeCompletedArrays(game.gridSize);
 
-  // Build menu overlay with current language
-  buildMenuOverlay();
+    // Build menu overlay with current language
+    buildMenuOverlay();
 
-  // Start the game loop (renders menu by default)
-  game.lastTimestamp = 0;
-  game.accumulator = 0;
-  requestAnimationFrame(gameLoop);
+    // Start the game loop
+    game.lastTimestamp = 0;
+    game.accumulator = 0;
+    requestAnimationFrame(gameLoop);
+
+    console.log('[SudokuSurvivor] Init OK — grid=' + game.gridSize + ' difficulty=' + game.difficulty + ' state=' + game.state);
+  } catch (err) {
+    console.error('[SudokuSurvivor] Init FAILED:', err);
+  }
 }
 
 /**
@@ -523,17 +553,27 @@ function buildSudokuTable() {
   table.className = game.gridSize === 9 ? 'grid-9' : '';
   const size = game.gridSize;
 
-  for (let r = 0; r < size; r++) {
-    const tr = document.createElement('tr');
-    const boxRows = size === 6 ? 2 : 3;
-    const boxCols = size === 6 ? 3 : 3;
-    if (r > 0 && r % boxRows === 0) tr.classList.add('box-border-bottom');
-    for (let c = 0; c < size; c++) {
-      const td = document.createElement('td');
+  // Box dimensions: 6×6 → 2×3 boxes, 9×9 → 3×3 boxes
+  var boxRows = size === 6 ? 2 : 3;
+  var boxCols = size === 6 ? 3 : 3;
+
+  for (var r = 0; r < size; r++) {
+    var tr = document.createElement('tr');
+    // Thick border AFTER the last row of each box (not after the last grid row)
+    if ((r + 1) % boxRows === 0 && r < size - 1) {
+      tr.classList.add('box-border-bottom');
+    }
+    for (var c = 0; c < size; c++) {
+      var td = document.createElement('td');
       td.dataset.row = r;
       td.dataset.col = c;
-      if (c > 0 && c % boxCols === 0) td.classList.add('box-border-right');
-      td.addEventListener('click', () => onSudokuCellClick(r, c));
+      // Thick border AFTER the last column of each box
+      if ((c + 1) % boxCols === 0 && c < size - 1) {
+        td.classList.add('box-border-right');
+      }
+      td.addEventListener('click', (function (row, col) {
+        return function () { onSudokuCellClick(row, col); };
+      })(r, c));
       tr.appendChild(td);
     }
     table.appendChild(tr);
@@ -541,39 +581,19 @@ function buildSudokuTable() {
 }
 
 function buildNumberPad() {
-  const pad = document.getElementById('number-pad');
+  var pad = document.getElementById('number-pad');
+  if (!pad) return;
   pad.innerHTML = '';
-  const maxNum = game.gridSize === 6 ? 6 : 9;
-  for (let v = 1; v <= maxNum; v++) {
-    const btn = document.createElement('button');
+  var maxNum = game.gridSize === 6 ? 6 : 9;
+  for (var v = 1; v <= maxNum; v++) {
+    var btn = document.createElement('button');
     btn.className = 'num-btn';
     btn.dataset.value = v;
     btn.textContent = v;
-    btn.addEventListener('click', () => onSudokuInput(v));
+    btn.addEventListener('click', (function (val) {
+      return function () { onSudokuInput(val); };
+    })(v));
     pad.appendChild(btn);
-  }
-}
-  const table = document.getElementById('sudoku-grid');
-  table.innerHTML = '';
-
-  for (let r = 0; r < 6; r++) {
-    const tr = document.createElement('tr');
-    // Add thick border class for box boundaries (rows 1 and 3, 0-indexed)
-    if (r === 1 || r === 3) {
-      tr.classList.add('box-border-bottom');
-    }
-    for (let c = 0; c < 6; c++) {
-      const td = document.createElement('td');
-      td.dataset.row = r;
-      td.dataset.col = c;
-      // Thick border for box boundaries (cols 2, 0-indexed)
-      if (c === 2) {
-        td.classList.add('box-border-right');
-      }
-      td.addEventListener('click', () => onSudokuCellClick(r, c));
-      tr.appendChild(td);
-    }
-    table.appendChild(tr);
   }
 }
 
@@ -1056,27 +1076,37 @@ function buildMenuOverlay() {
     <div class="difficulty-selector">${gridButtons}</div>
     <div class="difficulty-selector">${diffButtons}</div>
     <div class="key-hint" data-i18n="menu.start">${I18n.t('menu.start')}</div>
+    <div style="font-size:12px;color:#666;margin-top:6px;">${I18n.t('esc.menu')} &nbsp;|&nbsp; 🌐 ${I18n.getLang() === 'zh' ? '中→EN' : 'EN→中'} &nbsp;|&nbsp; 🔊</div>
   `;
   overlay.classList.remove('hidden');
 
   // Click handlers: grid size
-  overlay.querySelectorAll('[data-grid]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+  overlay.querySelectorAll('[data-grid]').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
       e.stopPropagation();
-      const size = parseInt(btn.dataset.grid);
-      setGridSize(size);
-      buildMenuOverlay();
+      e.preventDefault();
+      try {
+        var size = parseInt(btn.dataset.grid);
+        setGridSize(size);
+        buildMenuOverlay();
+      } catch (err) {
+        console.error('[SudokuSurvivor] Grid button error:', err);
+      }
     });
   });
 
   // Click handlers: difficulty
-  overlay.querySelectorAll('.difficulty-btn').forEach(btn => {
-    // Skip grid buttons handled above
+  overlay.querySelectorAll('.difficulty-btn').forEach(function (btn) {
     if (btn.dataset.grid) return;
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', function (e) {
       e.stopPropagation();
-      setDifficulty(btn.dataset.diff);
-      buildMenuOverlay();
+      e.preventDefault();
+      try {
+        setDifficulty(btn.dataset.diff);
+        buildMenuOverlay();
+      } catch (err) {
+        console.error('[SudokuSurvivor] Difficulty button error:', err);
+      }
     });
   });
 }
@@ -1087,20 +1117,26 @@ function setDifficulty(diff) {
 }
 
 function buildLevelClearOverlay() {
-  const overlay = document.getElementById('overlay');
+  var overlay = document.getElementById('overlay');
   overlay.className = 'levelclear';
-  const diffCfg = DIFFICULTY_CONFIG[game.difficulty];
-  const lang = I18n.getLang();
-  overlay.innerHTML = `
-    <h2 style="color:#2ecc71;">${I18n.t('levelclear.title')}</h2>
-    <div class="subtitle">
-      ${I18n.t('stat.level')}: ${game.level}<br>
-      ${I18n.t('stat.score')}: ${game.score}<br>
-      ${I18n.t('stat.time')}: ${formatTime(game.timer)}
-    </div>
-    <div class="key-hint" id="auto-advance">${I18n.t('levelclear.next')} 3s...</div>
-  `;
+  var lang = I18n.getLang();
+  var escText = I18n.t('esc.menu');
+  overlay.innerHTML = '<h2 style=\"color:#2ecc71;\">' + I18n.t('levelclear.title') + '</h2>' +
+    '<div class=\"subtitle\">' +
+      I18n.t('stat.level') + ': ' + game.level + '<br>' +
+      I18n.t('stat.score') + ': ' + game.score + '<br>' +
+      I18n.t('stat.time') + ': ' + formatTime(game.timer) +
+    '</div>' +
+    '<div class=\"key-hint\" id=\"auto-advance\">' + I18n.t('levelclear.next') + ' 3s...</div>' +
+    '<div class=\"key-hint\" style=\"font-size:13px;color:#aaa;animation:none;margin-top:6px;\">' + escText + '</div>';
   overlay.classList.remove('hidden');
+}
+
+function stopAllGameTimers() {
+  if (game.levelAdvanceInterval) {
+    clearInterval(game.levelAdvanceInterval);
+    game.levelAdvanceInterval = null;
+  }
 }
 
 function hideOverlay() {
@@ -1108,20 +1144,20 @@ function hideOverlay() {
 }
 
 function showGameOverOverlay() {
-  const overlay = document.getElementById('overlay');
+  var overlay = document.getElementById('overlay');
   overlay.className = 'gameover';
-  const diffCfg = DIFFICULTY_CONFIG[game.difficulty];
-  const lang = I18n.getLang();
-  const diffLabel = diffCfg.label[lang] || diffCfg.label.en;
-  overlay.innerHTML = `
-    <h2 style="color:#ff4757;">${I18n.t('gameover.title')}</h2>
-    <div class="subtitle">
-      ${I18n.t('gameover.level')}: ${game.level} &nbsp; (${diffLabel})<br>
-      ${I18n.t('gameover.score')}: ${game.score}<br>
-      ${I18n.t('gameover.time')}: ${formatTime(game.timer)}
-    </div>
-    <div class="key-hint">${I18n.t('gameover.restart')}</div>
-  `;
+  var diffCfg = DIFFICULTY_CONFIG[game.difficulty];
+  var lang = I18n.getLang();
+  var diffLabel = diffCfg.label[lang] || diffCfg.label.en;
+  var escText = I18n.t('esc.menu');
+  overlay.innerHTML = '<h2 style=\"color:#ff4757;\">' + I18n.t('gameover.title') + '</h2>' +
+    '<div class=\"subtitle\">' +
+      I18n.t('gameover.level') + ': ' + game.level + ' &nbsp; (' + diffLabel + ')<br>' +
+      I18n.t('gameover.score') + ': ' + game.score + '<br>' +
+      I18n.t('gameover.time') + ': ' + formatTime(game.timer) +
+    '</div>' +
+    '<div class=\"key-hint\">' + I18n.t('gameover.restart') + '</div>' +
+    '<div class=\"key-hint\" style=\"font-size:13px;color:#aaa;animation:none;margin-top:6px;\">' + escText + '</div>';
   overlay.classList.remove('hidden');
 }
 
