@@ -1,11 +1,27 @@
 // ============================================================
-// sudoku.js — 6×6 Sudoku Engine
-// Generates valid puzzles, validates moves, detects completions
+// sudoku.js — Parameterized Sudoku Engine (6×6 or 9×9)
 // ============================================================
 
+const Sudoku = { size: 6, boxRows: 2, boxCols: 3, maxNum: 6, boxCount: 6, diagBoxes: [0, 3] };
+
 /**
- * Fisher-Yates shuffle (in-place).
+ * Configure grid dimensions.
+ * @param {number} size — 6 (2×3 boxes) or 9 (3×3 boxes)
  */
+function configureSudokuEngine(size) {
+  Sudoku.size = size;
+  if (size === 6) {
+    Sudoku.boxRows = 2; Sudoku.boxCols = 3;
+    Sudoku.maxNum = 6; Sudoku.boxCount = 6;
+    Sudoku.diagBoxes = [0, 3];
+  } else {
+    Sudoku.boxRows = 3; Sudoku.boxCols = 3;
+    Sudoku.maxNum = 9; Sudoku.boxCount = 9;
+    Sudoku.diagBoxes = [0, 4, 8];
+  }
+}
+
+/** Fisher-Yates shuffle */
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -14,194 +30,119 @@ function shuffle(arr) {
   return arr;
 }
 
-/**
- * Box layout for 6×6 with 2×3 boxes:
- *   Box 0: rows 0-1, cols 0-2    Box 1: rows 0-1, cols 3-5
- *   Box 2: rows 2-3, cols 0-2    Box 3: rows 2-3, cols 3-5
- *   Box 4: rows 4-5, cols 0-2    Box 5: rows 4-5, cols 3-5
- */
+/** Which box does (row, col) belong to? */
 function getBoxIndex(row, col) {
-  return Math.floor(row / 2) * 2 + Math.floor(col / 3);
+  return Math.floor(row / Sudoku.boxRows) * (Sudoku.size / Sudoku.boxCols) + Math.floor(col / Sudoku.boxCols);
 }
 
-/**
- * Get all cell coordinates belonging to a given box (0-5).
- */
+/** All cell coordinates in a given box */
 function getBoxCells(boxIdx) {
-  const boxRow = Math.floor(boxIdx / 2); // 0, 1, 2
-  const boxCol = boxIdx % 2;             // 0, 1
-  const startRow = boxRow * 2;
-  const startCol = boxCol * 3;
+  const boxesPerRow = Sudoku.size / Sudoku.boxCols;
+  const boxRow = Math.floor(boxIdx / boxesPerRow);
+  const boxCol = boxIdx % boxesPerRow;
+  const sr = boxRow * Sudoku.boxRows;
+  const sc = boxCol * Sudoku.boxCols;
   const cells = [];
-  for (let r = startRow; r < startRow + 2; r++) {
-    for (let c = startCol; c < startCol + 3; c++) {
+  for (let r = sr; r < sr + Sudoku.boxRows; r++)
+    for (let c = sc; c < sc + Sudoku.boxCols; c++)
       cells.push({ row: r, col: c });
-    }
-  }
   return cells;
 }
 
-/**
- * Check if placing `value` at (row, col) is valid per Sudoku rules.
- * No duplicate in the same row, column, or 2×3 box.
- */
+/** Sudoku rule check */
 function isValidMove(grid, row, col, value) {
-  // Check row
-  for (let c = 0; c < 6; c++) {
-    if (grid[row][c] === value) return false;
-  }
-  // Check column
-  for (let r = 0; r < 6; r++) {
-    if (grid[r][col] === value) return false;
-  }
-  // Check 2×3 box
-  const boxCells = getBoxCells(getBoxIndex(row, col));
-  for (const cell of boxCells) {
-    if (grid[cell.row][cell.col] === value) return false;
-  }
+  for (let c = 0; c < Sudoku.size; c++) if (grid[row][c] === value) return false;
+  for (let r = 0; r < Sudoku.size; r++) if (grid[r][col] === value) return false;
+  for (const cell of getBoxCells(getBoxIndex(row, col))) if (grid[cell.row][cell.col] === value) return false;
   return true;
 }
 
-/**
- * Find the first empty cell (value === 0) in the grid.
- * Returns { row, col } or null if the grid is full.
- */
+/** Find first empty cell */
 function findEmpty(grid) {
-  for (let r = 0; r < 6; r++) {
-    for (let c = 0; c < 6; c++) {
+  for (let r = 0; r < Sudoku.size; r++)
+    for (let c = 0; c < Sudoku.size; c++)
       if (grid[r][c] === 0) return { row: r, col: c };
-    }
-  }
   return null;
 }
 
-/**
- * Solve the Sudoku grid in-place using backtracking.
- * Returns true if solved, false if unsolvable.
- */
+/** Backtracking solver */
 function solveSudoku(grid) {
   const empty = findEmpty(grid);
-  if (!empty) return true; // All cells filled — solved
-
+  if (!empty) return true;
   const { row, col } = empty;
-  const nums = shuffle([1, 2, 3, 4, 5, 6]);
-
+  const nums = shuffle(Array.from({ length: Sudoku.maxNum }, (_, i) => i + 1));
   for (const num of nums) {
     if (isValidMove(grid, row, col, num)) {
       grid[row][col] = num;
       if (solveSudoku(grid)) return true;
-      grid[row][col] = 0; // Backtrack
+      grid[row][col] = 0;
     }
   }
   return false;
 }
 
-/**
- * Pre-fill independent diagonal boxes to reduce backtracking.
- * For 6×6 with 2×3 boxes, only boxes 0 and 3 are truly independent
- * (they don't share any rows or columns):
- *   Box 0: rows 0-1, cols 0-2
- *   Box 3: rows 2-3, cols 3-5
- */
+/** Pre-fill independent diagonal boxes */
 function fillDiagonalBoxes(grid) {
-  // Box 0 and Box 3 are the only independent diagonal boxes in 6×6
-  const independentBoxes = [0, 3];
-  for (const boxIdx of independentBoxes) {
+  for (const boxIdx of Sudoku.diagBoxes) {
     const cells = getBoxCells(boxIdx);
-    const values = shuffle([1, 2, 3, 4, 5, 6]);
-    for (let i = 0; i < cells.length; i++) {
-      grid[cells[i].row][cells[i].col] = values[i];
-    }
+    const values = shuffle(Array.from({ length: Sudoku.maxNum }, (_, i) => i + 1));
+    for (let i = 0; i < cells.length; i++) grid[cells[i].row][cells[i].col] = values[i];
   }
 }
 
-/**
- * Generate a complete, valid 6×6 Sudoku solution.
- */
+/** Generate complete valid solution */
 function generateSolution() {
-  const grid = Array.from({ length: 6 }, () => Array(6).fill(0));
+  const grid = Array.from({ length: Sudoku.size }, () => Array(Sudoku.size).fill(0));
   fillDiagonalBoxes(grid);
   solveSudoku(grid);
   return grid;
 }
 
-/**
- * Create a puzzle by removing cells from a complete solution.
- * Returns a new grid with `emptyCells` cells set to 0.
- */
+/** Blank out cells to create puzzle */
 function createPuzzle(solution, emptyCells) {
   const puzzle = solution.map(row => [...row]);
-
-  // Build a list of all cell positions and shuffle it
   const positions = [];
-  for (let r = 0; r < 6; r++) {
-    for (let c = 0; c < 6; c++) {
-      positions.push({ r, c });
-    }
-  }
+  for (let r = 0; r < Sudoku.size; r++)
+    for (let c = 0; c < Sudoku.size; c++) positions.push({ r, c });
   shuffle(positions);
-
+  const maxEmpty = Sudoku.size * Sudoku.size - Sudoku.maxNum; // leave at least N clues
   let removed = 0;
   for (const { r, c } of positions) {
-    if (removed >= emptyCells) break;
+    if (removed >= Math.min(emptyCells, maxEmpty)) break;
     puzzle[r][c] = 0;
     removed++;
   }
-
   return puzzle;
 }
 
-/**
- * Main entry point: generate a new 6×6 Sudoku puzzle.
- *
- * @param {number} emptyCells — how many cells to leave blank (6–30 typical)
- * @returns {{ puzzle: number[][], solution: number[][] }}
- */
+/** Main: generate puzzle + solution */
 function generatePuzzle(emptyCells) {
   const solution = generateSolution();
-  const puzzle = createPuzzle(solution, Math.min(emptyCells, 30)); // Cap at 30
+  const maxEmpty = Sudoku.size * Sudoku.size - Sudoku.maxNum;
+  const puzzle = createPuzzle(solution, Math.min(emptyCells, maxEmpty));
   return { puzzle, solution };
 }
 
-/**
- * Check if a row is completely filled (all cells non-zero).
- */
+/** Row complete? */
 function isRowComplete(grid, row) {
-  for (let c = 0; c < 6; c++) {
-    if (grid[row][c] === 0) return false;
-  }
+  for (let c = 0; c < Sudoku.size; c++) if (grid[row][c] === 0) return false;
   return true;
 }
 
-/**
- * Check if a column is completely filled (all cells non-zero).
- */
+/** Column complete? */
 function isColComplete(grid, col) {
-  for (let r = 0; r < 6; r++) {
-    if (grid[r][col] === 0) return false;
-  }
+  for (let r = 0; r < Sudoku.size; r++) if (grid[r][col] === 0) return false;
   return true;
 }
 
-/**
- * Check if a 2×3 box is completely filled (all cells non-zero).
- */
+/** Box complete? */
 function isBoxComplete(grid, boxIdx) {
-  const cells = getBoxCells(boxIdx);
-  for (const cell of cells) {
-    if (grid[cell.row][cell.col] === 0) return false;
-  }
+  for (const cell of getBoxCells(boxIdx)) if (grid[cell.row][cell.col] === 0) return false;
   return true;
 }
 
-/**
- * Check if the entire puzzle is filled.
- */
+/** Entire puzzle filled? */
 function isPuzzleComplete(grid) {
-  for (let r = 0; r < 6; r++) {
-    for (let c = 0; c < 6; c++) {
-      if (grid[r][c] === 0) return false;
-    }
-  }
+  for (let r = 0; r < Sudoku.size; r++) for (let c = 0; c < Sudoku.size; c++) if (grid[r][c] === 0) return false;
   return true;
 }

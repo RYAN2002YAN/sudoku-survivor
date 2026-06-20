@@ -268,6 +268,7 @@ const game = {
   lives: 3,
   timer: 0,
   difficulty: 'medium', // 'easy' | 'medium' | 'hard' | 'extreme'
+  gridSize: 6,          // 6 (2×3 boxes) or 9 (3×3 boxes)
 
   // Player
   playerTileX: 5,
@@ -285,11 +286,7 @@ const game = {
   sudokuSolution: null,  // number[6][6]
   sudokuGrid: null,      // number[6][6] — the puzzle (givens non-zero)
   playerGrid: null,      // number[6][6] — current board state
-  completed: {
-    row: [false, false, false, false, false, false],
-    col: [false, false, false, false, false, false],
-    box: [false, false, false, false, false, false],
-  },
+  completed: { row: [], col: [], box: [] },
   selectedCell: { row: -1, col: -1 },
 
   // Monsters and effects
@@ -320,6 +317,7 @@ function handleKeyDown(e) {
   // Prevent default for game keys
   const gameKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'KeyR',
     'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6',
+    'Digit7', 'Digit8', 'Digit9',
     'Backspace', 'Delete', 'Escape'];
   if (gameKeys.includes(e.code)) {
     e.preventDefault();
@@ -359,8 +357,9 @@ function handleKeyDown(e) {
     return;
   }
 
-  // Number keys 1-6: fill selected Sudoku cell
-  if (e.code >= 'Digit1' && e.code <= 'Digit6') {
+  // Number keys 1-9: fill selected Sudoku cell
+  const maxDigit = game.gridSize === 6 ? 'Digit6' : 'Digit9';
+  if (e.code >= 'Digit1' && e.code <= maxDigit) {
     const value = parseInt(e.code.replace('Digit', ''));
     onSudokuInput(value);
     return;
@@ -483,16 +482,11 @@ function init() {
   // Virtual D-pad for touch devices
   setupTouchControls();
 
-  // Number pad button listeners
-  document.querySelectorAll('.num-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const value = parseInt(btn.dataset.value);
-      onSudokuInput(value);
-    });
-  });
-
-  // Build Sudoku DOM table
+  // Build dynamic UI
+  configureSudokuEngine(game.gridSize);
   buildSudokuTable();
+  buildNumberPad();
+  game.completed = makeCompletedArrays(game.gridSize);
 
   // Build menu overlay with current language
   buildMenuOverlay();
@@ -506,7 +500,59 @@ function init() {
 /**
  * Build the 6×6 Sudoku table in the DOM.
  */
+function makeCompletedArrays(size) {
+  const boxCount = size === 6 ? 6 : 9;
+  return {
+    row: Array(size).fill(false),
+    col: Array(size).fill(false),
+    box: Array(boxCount).fill(false),
+  };
+}
+
+function setGridSize(size) {
+  game.gridSize = size;
+  configureSudokuEngine(size);
+  buildSudokuTable();
+  buildNumberPad();
+  game.completed = makeCompletedArrays(size);
+}
+
 function buildSudokuTable() {
+  const table = document.getElementById('sudoku-grid');
+  table.innerHTML = '';
+  table.className = game.gridSize === 9 ? 'grid-9' : '';
+  const size = game.gridSize;
+
+  for (let r = 0; r < size; r++) {
+    const tr = document.createElement('tr');
+    const boxRows = size === 6 ? 2 : 3;
+    const boxCols = size === 6 ? 3 : 3;
+    if (r > 0 && r % boxRows === 0) tr.classList.add('box-border-bottom');
+    for (let c = 0; c < size; c++) {
+      const td = document.createElement('td');
+      td.dataset.row = r;
+      td.dataset.col = c;
+      if (c > 0 && c % boxCols === 0) td.classList.add('box-border-right');
+      td.addEventListener('click', () => onSudokuCellClick(r, c));
+      tr.appendChild(td);
+    }
+    table.appendChild(tr);
+  }
+}
+
+function buildNumberPad() {
+  const pad = document.getElementById('number-pad');
+  pad.innerHTML = '';
+  const maxNum = game.gridSize === 6 ? 6 : 9;
+  for (let v = 1; v <= maxNum; v++) {
+    const btn = document.createElement('button');
+    btn.className = 'num-btn';
+    btn.dataset.value = v;
+    btn.textContent = v;
+    btn.addEventListener('click', () => onSudokuInput(v));
+    pad.appendChild(btn);
+  }
+}
   const table = document.getElementById('sudoku-grid');
   table.innerHTML = '';
 
@@ -557,11 +603,7 @@ function startLevel(level) {
   game.invulnTimer = 0;
   game.moveCooldown = 0;
   game.lastMoveDir = { dx: 0, dy: -1 };
-  game.completed = {
-    row: [false, false, false, false, false, false],
-    col: [false, false, false, false, false, false],
-    box: [false, false, false, false, false, false],
-  };
+  game.completed = makeCompletedArrays(game.gridSize);
   game.selectedCell = { row: -1, col: -1 };
   game.effectMsg = '';
   game.effectTimer = 0;
@@ -586,8 +628,15 @@ function startLevel(level) {
     }
   }
 
+  // Configure Sudoku engine for current grid size
+  configureSudokuEngine(game.gridSize);
+
+  // Scale empty cells for grid size (6×6=36 cells, 9×9=81 cells → ~2.25x)
+  const emptyScale = game.gridSize === 9 ? 2.25 : 1;
+  const emptyCells = Math.round(config.emptyCells * emptyScale);
+
   // Generate Sudoku puzzle
-  const { puzzle, solution } = generatePuzzle(config.emptyCells);
+  const { puzzle, solution } = generatePuzzle(emptyCells);
   game.sudokuGrid = puzzle.map(row => [...row]);     // Deep copy
   game.sudokuSolution = solution.map(row => [...row]);
   game.playerGrid = puzzle.map(row => [...row]);     // Starts with givens, player fills rest
@@ -990,20 +1039,44 @@ function buildMenuOverlay() {
     return `<button class="${active}" data-diff="${d}">${label}</button>`;
   }).join('');
 
+  // Grid size buttons
+  const gridSizes = [
+    { size: 6, label: { en: '6×6', zh: '6×6 快速' } },
+    { size: 9, label: { en: '9×9', zh: '9×9 深度' } },
+  ];
+  const gridButtons = gridSizes.map(g => {
+    const label = g.label[lang] || g.label.en;
+    const active = game.gridSize === g.size ? 'difficulty-btn active' : 'difficulty-btn';
+    return `<button class="${active}" data-grid="${g.size}">${label}</button>`;
+  }).join('');
+
   overlay.innerHTML = `
     <h1 data-i18n="menu.title">${I18n.t('menu.title').replace('\n', '<br>')}</h1>
     <div class="subtitle" data-i18n="menu.subtitle">${I18n.t('menu.subtitle').replace(/\n/g, '<br>')}</div>
+    <div class="difficulty-selector">${gridButtons}</div>
     <div class="difficulty-selector">${diffButtons}</div>
     <div class="key-hint" data-i18n="menu.start">${I18n.t('menu.start')}</div>
   `;
   overlay.classList.remove('hidden');
 
-  // Add click handlers to difficulty buttons
+  // Click handlers: grid size
+  overlay.querySelectorAll('[data-grid]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const size = parseInt(btn.dataset.grid);
+      setGridSize(size);
+      buildMenuOverlay();
+    });
+  });
+
+  // Click handlers: difficulty
   overlay.querySelectorAll('.difficulty-btn').forEach(btn => {
+    // Skip grid buttons handled above
+    if (btn.dataset.grid) return;
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       setDifficulty(btn.dataset.diff);
-      buildMenuOverlay(); // Rebuild to show active state
+      buildMenuOverlay();
     });
   });
 }
