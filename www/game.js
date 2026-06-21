@@ -1275,56 +1275,6 @@ function renderSudoku() {
 
 // ---- Canvas Rendering ----
 
-function renderPvPCanvas() {
-  var ctx = game.ctx;
-  var canvas = game.canvas;
-  ctx.fillStyle = '#0a0a14';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // PvP Arena background
-  ctx.fillStyle = '#1a1a2e';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // Title
-  ctx.fillStyle = '#ffd700';
-  ctx.font = '22px monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText('⚔️ ARENA ⚔️', canvas.width / 2, 50);
-
-  // Player labels
-  ctx.fillStyle = '#2ecc71';
-  ctx.font = '16px monospace';
-  ctx.fillText('PLAYER 1', canvas.width / 4, canvas.height / 2 - 20);
-  ctx.fillText('PLAYER 2', canvas.width * 3 / 4, canvas.height / 2 - 20);
-
-  // Keyboard hints
-  ctx.fillStyle = '#888';
-  ctx.font = '12px monospace';
-  ctx.fillText('Keyboard 1-6', canvas.width / 4, canvas.height / 2 + 10);
-  ctx.fillText('Mouse click', canvas.width * 3 / 4, canvas.height / 2 + 10);
-
-  // VS
-  ctx.fillStyle = '#ff4757';
-  ctx.font = '28px monospace';
-  ctx.fillText('VS', canvas.width / 2, canvas.height / 2);
-
-  // Timer
-  var mins = Math.floor(PvP.timer / 60);
-  var secs = Math.floor(PvP.timer % 60);
-  ctx.fillStyle = '#ffd700';
-  ctx.font = '18px monospace';
-  ctx.fillText(mins + ':' + (secs < 10 ? '0' : '') + secs, canvas.width / 2, canvas.height - 30);
-
-  // Winner banner
-  if (PvP.winner) {
-    ctx.fillStyle = 'rgba(0,0,0,0.7)';
-    ctx.fillRect(0, canvas.height / 2 - 40, canvas.width, 60);
-    ctx.fillStyle = '#ffd700';
-    ctx.font = '24px monospace';
-    ctx.fillText('PLAYER ' + PvP.winner + ' WINS!', canvas.width / 2, canvas.height / 2 + 5);
-  }
-}
-
 function render() {
   const ctx = game.ctx;
   const canvas = game.canvas;
