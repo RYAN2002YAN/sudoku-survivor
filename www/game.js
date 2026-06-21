@@ -346,6 +346,7 @@ function handleKeyDown(e) {
       try {
         SoundManager.init();
         BGM.start('playing');
+        hideOverlay();
         startLevel(1);
       } catch (err) {
         console.error('[SudokuSurvivor] Space handler error:', err);
@@ -693,6 +694,7 @@ function restartGame() {
   game.score = 0;
   game.lives = 3;
   BGM.setScene('playing');
+  hideOverlay();
   startLevel(1);
 }
 
