@@ -1052,70 +1052,174 @@ function onPuzzleComplete() {
 
 // ---- Overlay Builders ----
 
+var menuState = 'mode'; // 'mode' | 'difficulty' | 'start'
+
 function buildMenuOverlay() {
-  const overlay = document.getElementById('overlay');
+  var overlay = document.getElementById('overlay');
   overlay.className = '';
-  const lang = I18n.getLang();
+  var lang = I18n.getLang();
+  menuState = 'mode';
 
-  const diffs = ['easy', 'medium', 'hard', 'extreme'];
-  const diffButtons = diffs.map(d => {
-    const cfg = DIFFICULTY_CONFIG[d];
-    const label = cfg.label[lang] || cfg.label.en;
-    const active = game.difficulty === d ? 'difficulty-btn active' : 'difficulty-btn';
-    return `<button class="${active}" data-diff="${d}">${label}</button>`;
-  }).join('');
+  var html = '';
+  // Floating numbers background
+  html += '<div class="floating-bg" id="floating-bg"></div>';
 
-  // Grid size buttons
-  const gridSizes = [
-    { size: 6, label: { en: '6×6', zh: '6×6 快速' } },
-    { size: 9, label: { en: '9×9', zh: '9×9 深度' } },
-  ];
-  const gridButtons = gridSizes.map(g => {
-    const label = g.label[lang] || g.label.en;
-    const active = game.gridSize === g.size ? 'difficulty-btn active' : 'difficulty-btn';
-    return `<button class="${active}" data-grid="${g.size}">${label}</button>`;
-  }).join('');
+  // Title area — always visible
+  html += '<div style="text-align:center;z-index:1;position:relative;">';
+  html += '<h1 class="menu-title-main">' + I18n.t('menu.title').replace('\n', '<br>') + '</h1>';
+  html += '<div class="menu-title-sub">SUDOKU SURVIVOR</div>';
+  html += '<div class="menu-title-desc">' + (lang === 'zh' ? '一边躲避地牢怪物，一边解开数独' : 'Solve Sudoku while escaping dungeon monsters') + '</div>';
+  html += '</div>';
 
-  overlay.innerHTML = `
-    <h1 data-i18n="menu.title">${I18n.t('menu.title').replace('\n', '<br>')}</h1>
-    <div class="subtitle" data-i18n="menu.subtitle">${I18n.t('menu.subtitle').replace(/\n/g, '<br>')}</div>
-    <div class="difficulty-selector">${gridButtons}</div>
-    <div class="difficulty-selector">${diffButtons}</div>
-    <div class="key-hint" data-i18n="menu.start">${I18n.t('menu.start')}</div>
-    <div style="font-size:12px;color:#64748b;margin-top:6px;">${I18n.t('esc.menu')} &nbsp;|&nbsp; 🌐 ${I18n.getLang() === 'zh' ? '中→EN' : 'EN→中'} &nbsp;|&nbsp; 🔊</div>
-  `;
+  // Stage 1: Mode selection
+  html += '<div class="menu-stage active" id="stage-mode" style="margin-top:30px;">';
+  html += '<div class="menu-section-title">' + (lang === 'zh' ? '选择模式' : 'Select Mode') + '</div>';
+  html += '<div class="mode-btns">';
+  html += '<button class="mode-btn mode-btn-6" id="btn-mode-6"><span class="mode-icon">⚡</span><span class="mode-label">6×6</span><span class="mode-sub">' + (lang === 'zh' ? '快节奏，适合新手' : 'Fast pace, beginner friendly') + '</span></button>';
+  html += '<button class="mode-btn mode-btn-9" id="btn-mode-9"><span class="mode-icon">🧠</span><span class="mode-label">9×9</span><span class="mode-sub">' + (lang === 'zh' ? '深度挑战，适合高手' : 'Deep challenge, for experts') + '</span></button>';
+  html += '</div></div>';
+
+  // Stage 2: Difficulty selection (hidden)
+  html += '<div class="menu-stage" id="stage-diff" style="margin-top:30px;">';
+  html += '<div class="menu-section-title">' + (lang === 'zh' ? '选择难度' : 'Select Difficulty') + '</div>';
+  html += '<div class="diff-btns">';
+  var diffs = [{id:'easy',icon:'🌱',sub:lang==='zh'?'轻松':'Relaxed'},
+               {id:'medium',icon:'⚔️',sub:lang==='zh'?'标准':'Standard'},
+               {id:'hard',icon:'🔥',sub:lang==='zh'?'有挑战':'Challenging'},
+               {id:'extreme',icon:'💀',sub:lang==='zh'?'极限':'Extreme'}];
+  diffs.forEach(function(d) {
+    var cfg = DIFFICULTY_CONFIG[d.id];
+    var label = cfg.label[lang] || cfg.label.en;
+    var sel = game.difficulty === d.id ? ' selected' : '';
+    html += '<button class="diff-btn diff-' + d.id + sel + '" data-diff="' + d.id + '"><span class="diff-icon">' + d.icon + '</span><span class="diff-label">' + label + '</span><span class="diff-sub">' + d.sub + '</span></button>';
+  });
+  html += '</div></div>';
+
+  // Stage 3: Start button (hidden)
+  html += '<div class="menu-stage" id="stage-start" style="margin-top:30px;">';
+  html += '<button class="start-btn" id="btn-start-game">' + (lang === 'zh' ? '开始游戏' : 'START GAME') + '</button>';
+  html += '<div class="start-key-hint">' + (lang === 'zh' ? '按空格键快速开始' : 'Press SPACE to start') + '</div>';
+  html += '</div>';
+
+  // Bottom settings bar
+  html += '<div class="menu-bottom" style="margin-top:24px;z-index:1;position:relative;">';
+  var muted = SoundManager.isMuted ? SoundManager.isMuted() : false;
+  html += '<button class="menu-bottom-btn" id="menu-btn-mute">' + (muted ? '🔇' : '🔊') + ' ' + (muted ? (lang==='zh'?'音效关':'SFX Off') : (lang==='zh'?'音效开':'SFX On')) + '</button>';
+  html += '<button class="menu-bottom-btn" id="menu-btn-lang">🌐 ' + (lang === 'zh' ? '中文' : 'English') + '</button>';
+  html += '<button class="menu-bottom-btn" id="menu-btn-how">ℹ️ ' + (lang === 'zh' ? '如何玩' : 'How to Play') + '</button>';
+  html += '</div>';
+
+  overlay.innerHTML = html;
   overlay.classList.remove('hidden');
 
-  // Click handlers: grid size
-  overlay.querySelectorAll('[data-grid]').forEach(function (btn) {
-    btn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      e.preventDefault();
-      try {
-        var size = parseInt(btn.dataset.grid);
-        setGridSize(size);
-        buildMenuOverlay();
-      } catch (err) {
-        console.error('[SudokuSurvivor] Grid button error:', err);
-      }
+  // Spawn floating numbers
+  spawnFloatingNumbers();
+
+  // ---- Event handlers ----
+  attachMenuEvents();
+}
+
+function attachMenuEvents() {
+  var overlay = document.getElementById('overlay');
+
+  // Mode buttons
+  var btn6 = overlay.querySelector('#btn-mode-6');
+  var btn9 = overlay.querySelector('#btn-mode-9');
+  if (btn6) btn6.addEventListener('click', function() { setGridSize(6); goToStage('difficulty'); });
+  if (btn9) btn9.addEventListener('click', function() { setGridSize(9); goToStage('difficulty'); });
+
+  // Difficulty buttons
+  overlay.querySelectorAll('.diff-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      setDifficulty(btn.dataset.diff);
+      // Update selected state
+      overlay.querySelectorAll('.diff-btn').forEach(function(b) { b.classList.remove('selected'); });
+      btn.classList.add('selected');
+      goToStage('start');
     });
   });
 
-  // Click handlers: difficulty
-  overlay.querySelectorAll('.difficulty-btn').forEach(function (btn) {
-    if (btn.dataset.grid) return;
-    btn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      e.preventDefault();
-      try {
-        setDifficulty(btn.dataset.diff);
-        buildMenuOverlay();
-      } catch (err) {
-        console.error('[SudokuSurvivor] Difficulty button error:', err);
-      }
-    });
+  // Start button
+  var startBtn = overlay.querySelector('#btn-start-game');
+  if (startBtn) startBtn.addEventListener('click', function() {
+    SoundManager.init();
+    BGM.start('playing');
+    hideOverlay();
+    startLevel(1);
   });
 
+  // Bottom buttons
+  var muteBtn = overlay.querySelector('#menu-btn-mute');
+  if (muteBtn) muteBtn.addEventListener('click', function() {
+    var m = SoundManager.toggleMute();
+    BGM.toggleMute();
+    muteBtn.innerHTML = m ? '🔇 ' + (I18n.getLang()==='zh'?'音效关':'SFX Off') : '🔊 ' + (I18n.getLang()==='zh'?'音效开':'SFX On');
+  });
+
+  var langBtn = overlay.querySelector('#menu-btn-lang');
+  if (langBtn) langBtn.addEventListener('click', function() {
+    I18n.toggleLang();
+    buildMenuOverlay();
+  });
+
+  var howBtn = overlay.querySelector('#menu-btn-how');
+  if (howBtn) howBtn.addEventListener('click', function() {
+    alert(I18n.t('menu.subtitle').replace(/<br>/g, '\n').replace(/<[^>]+>/g, ''));
+  });
+}
+
+function goToStage(stage) {
+  menuState = stage;
+  var overlay = document.getElementById('overlay');
+  var stages = overlay.querySelectorAll('.menu-stage');
+  stages.forEach(function(s) { s.classList.remove('active'); });
+
+  var target = overlay.querySelector('#stage-' + stage);
+  if (target) {
+    // Re-trigger animation
+    target.style.animation = 'none';
+    target.offsetHeight; // trigger reflow
+    target.style.animation = '';
+    target.classList.add('active');
+  }
+
+  // If going to start, pulse the button
+  if (stage === 'start') {
+    var startBtn = overlay.querySelector('#btn-start-game');
+    if (startBtn) { startBtn.style.animation = 'none'; startBtn.offsetHeight; startBtn.style.animation = 'pulse 2s infinite'; }
+  }
+}
+
+var floatingInterval = null;
+function spawnFloatingNumbers() {
+  if (floatingInterval) clearInterval(floatingInterval);
+  var bg = document.getElementById('floating-bg');
+  if (!bg) return;
+  bg.innerHTML = '';
+  var size = game.gridSize || 6;
+  for (var i = 0; i < 8; i++) {
+    var span = document.createElement('span');
+    span.className = 'floating-num';
+    span.textContent = Math.floor(Math.random() * size) + 1;
+    span.style.left = Math.random() * 90 + '%';
+    span.style.animationDelay = Math.random() * 12 + 's';
+    span.style.animationDuration = (10 + Math.random() * 8) + 's';
+    span.style.fontSize = (24 + Math.random() * 40) + 'px';
+    bg.appendChild(span);
+  }
+  floatingInterval = setInterval(function() {
+    var nums = bg.querySelectorAll('.floating-num');
+    if (nums.length < 8) {
+      var span = document.createElement('span');
+      span.className = 'floating-num';
+      span.textContent = Math.floor(Math.random() * (game.gridSize || 6)) + 1;
+      span.style.left = Math.random() * 90 + '%';
+      span.style.animationDuration = (10 + Math.random() * 8) + 's';
+      span.style.fontSize = (24 + Math.random() * 40) + 'px';
+      bg.appendChild(span);
+      setTimeout(function() { if (span.parentNode) span.remove(); }, 13000);
+    }
+  }, 2000);
 }
 
 function setDifficulty(diff) {

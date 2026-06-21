@@ -204,6 +204,141 @@
     #mute-btn.muted { color: #ef4444; border-color: rgba(239, 68, 68, 0.4); }
 
     /* ============================================================
+       NEW MENU SYSTEM — layered progressive design
+       ============================================================ */
+    .menu-stage { display: none; flex-direction: column; align-items: center; }
+    .menu-stage.active { display: flex; }
+
+    /* Animations */
+    @keyframes titleEntrance {
+      0% { opacity: 0; transform: translateY(-100px) scale(0.8); }
+      60% { transform: translateY(10px) scale(1.05); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes slideInRight {
+      0% { opacity: 0; transform: translateX(50px); }
+      100% { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes fadeInUp {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+    @keyframes floatNum {
+      0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
+      20% { opacity: 0.06; }
+      80% { opacity: 0.06; }
+      100% { transform: translateY(-400px) translateX(30px) rotate(15deg); opacity: 0; }
+    }
+    @keyframes fadeOutScale {
+      0% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(0.9); }
+    }
+
+    /* ---- Floating numbers background ---- */
+    .floating-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; z-index: 0; }
+    .floating-num {
+      position: absolute; bottom: -40px;
+      font-size: 32px; color: #3b82f6; opacity: 0;
+      animation: floatNum 12s linear infinite;
+      font-family: monospace; font-weight: bold;
+    }
+
+    /* ---- Menu Title Area ---- */
+    .menu-title-main {
+      font-size: 72px; font-weight: 900; color: #f8fafc;
+      text-shadow: 0 0 40px rgba(59, 130, 246, 0.5);
+      animation: titleEntrance 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+      margin: 0; line-height: 1.1;
+    }
+    .menu-title-sub {
+      font-size: 24px; font-weight: 400; color: #64748b;
+      letter-spacing: 8px; margin-top: 16px;
+      animation: fadeInUp 0.6s 0.2s both ease;
+    }
+    .menu-title-desc {
+      font-size: 16px; color: #94a3b8; margin-top: 32px;
+      animation: fadeInUp 0.6s 0.3s both ease;
+    }
+
+    /* ---- Mode Select Buttons ---- */
+    .menu-section-title {
+      font-size: 20px; font-weight: 600; color: #cbd5e1;
+      margin-bottom: 24px; animation: slideInRight 0.4s ease;
+    }
+    .mode-btns { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+
+    .mode-btn {
+      width: 280px; height: 120px; border: none; border-radius: 16px;
+      cursor: pointer; transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-family: inherit; position: relative; overflow: hidden;
+    }
+    .mode-btn-6 {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+    }
+    .mode-btn-9 {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4);
+    }
+    .mode-btn:hover { transform: scale(1.05); }
+    .mode-btn-6:hover { box-shadow: 0 12px 32px rgba(59, 130, 246, 0.55); }
+    .mode-btn-9:hover { box-shadow: 0 12px 32px rgba(139, 92, 246, 0.55); }
+    .mode-btn:active { transform: scale(0.95); }
+    .mode-btn .mode-icon { font-size: 32px; margin-bottom: 4px; }
+    .mode-btn .mode-label { font-size: 24px; font-weight: 700; color: #fff; }
+    .mode-btn .mode-sub { font-size: 14px; color: rgba(255,255,255,0.8); margin-top: 4px; }
+
+    /* ---- Difficulty Buttons ---- */
+    .diff-btns { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+    .diff-btn {
+      width: 160px; height: 100px; border: 3px solid transparent; border-radius: 12px;
+      cursor: pointer; transition: all 0.2s ease;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-family: inherit; color: #fff; position: relative;
+    }
+    .diff-btn .diff-icon { font-size: 28px; margin-bottom: 2px; }
+    .diff-btn .diff-label { font-size: 18px; font-weight: 600; }
+    .diff-btn .diff-sub { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+    .diff-btn:hover { transform: translateY(-4px); }
+    .diff-btn.selected { border-color: #fff; transform: scale(1.05); }
+
+    .diff-easy { background: #10b981; box-shadow: 0 4px 16px rgba(16,185,129,0.3); }
+    .diff-easy:hover { box-shadow: 0 8px 24px rgba(16,185,129,0.45); }
+    .diff-medium { background: #3b82f6; box-shadow: 0 4px 16px rgba(59,130,246,0.3); }
+    .diff-medium:hover { box-shadow: 0 8px 24px rgba(59,130,246,0.45); }
+    .diff-hard { background: #f59e0b; box-shadow: 0 4px 16px rgba(245,158,11,0.3); }
+    .diff-hard:hover { box-shadow: 0 8px 24px rgba(245,158,11,0.45); }
+    .diff-extreme { background: #ef4444; box-shadow: 0 4px 16px rgba(239,68,68,0.3); }
+    .diff-extreme:hover { box-shadow: 0 8px 24px rgba(239,68,68,0.45); }
+
+    /* ---- Start Button ---- */
+    .start-btn {
+      width: 320px; height: 80px; border: none; border-radius: 16px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #fff; font-size: 28px; font-weight: 800; font-family: inherit;
+      cursor: pointer; box-shadow: 0 12px 32px rgba(16, 185, 129, 0.4);
+      transition: all 0.2s ease; animation: pulse 2s infinite;
+    }
+    .start-btn:hover { transform: scale(1.08); box-shadow: 0 16px 40px rgba(16,185,129,0.5); }
+    .start-btn:active { transform: scale(0.9); }
+    .start-key-hint { font-size: 14px; color: #64748b; margin-top: 16px; }
+
+    /* ---- Bottom settings ---- */
+    .menu-bottom { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+    .menu-bottom-btn {
+      min-width: 120px; height: 40px; padding: 0 14px;
+      background: rgba(148, 163, 184, 0.1); border: 1px solid rgba(148,163,184,0.15);
+      border-radius: 8px; color: #94a3b8; font-size: 13px; font-family: inherit;
+      cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .menu-bottom-btn:hover { background: rgba(148,163,184,0.2); color: #e2e8f0; }
+
+    /* ---- ============================================================
        RESPONSIVE: Mobile
        ============================================================ */
     @media (max-width: 750px) {
@@ -223,6 +358,17 @@
       #overlay h2 { font-size: 18px; }
       #overlay .subtitle { font-size: 11px; margin-bottom: 14px; }
       #overlay .key-hint { font-size: 13px; }
+      /* New menu mobile */
+      .menu-title-main { font-size: 42px !important; }
+      .menu-title-sub { font-size: 16px !important; letter-spacing: 4px !important; }
+      .menu-title-desc { font-size: 13px !important; margin-top: 20px !important; }
+      .mode-btn { width: 140px; height: 90px; }
+      .mode-btn .mode-label { font-size: 18px; }
+      .mode-btn .mode-sub { font-size: 11px; }
+      .diff-btn { width: 70px; height: 80px; }
+      .diff-btn .diff-label { font-size: 14px; }
+      .start-btn { width: 260px; height: 64px; font-size: 22px; }
+      .menu-bottom-btn { min-width: 90px; height: 36px; font-size: 11px; }
     }
   </style>
 </head>
