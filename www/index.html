@@ -333,6 +333,47 @@
     .pvp-numpad { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; max-width: 300px; }
     .pvp-numpad .num-btn { width: 36px; height: 36px; font-size: 15px; }
 
+    /* ============================================================
+       SURVIVOR MODE
+       ============================================================ */
+    #survivor-container { display: none; width: 100%; }
+    #sv-top-bar {
+      display: flex; justify-content: center; align-items: center; gap: 30px;
+      padding: 6px 12px; background: #1a1a2e; border: 1px solid #2a2a4a;
+      border-radius: 4px; margin-bottom: 10px;
+    }
+    #sv-timer { font-size: 22px; font-weight: bold; color: #ffd700; }
+    #sv-winner-msg { font-size: 16px; font-weight: bold; }
+    #sv-quit { background: none; border: 1px solid #444; color: #888; font-size: 16px; cursor: pointer; padding: 4px 10px; border-radius: 4px; }
+    #sv-quit:hover { color: #f44; border-color: #f44; }
+    #sv-main { display: flex; gap: 10px; justify-content: center; align-items: flex-start; }
+    .sv-side { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .sv-side h3 { font-size: 13px; color: #aaa; margin: 0; }
+    .sv-lives { font-size: 16px; letter-spacing: 2px; }
+    #sv-dungeon-wrap { flex: 0 0 auto; }
+    #sv-canvas { border: 2px solid #2a2a4a; border-radius: 4px; display: block; }
+    .sv-grid { border-collapse: collapse; border: 2px solid #888; }
+    .sv-grid td {
+      width: 34px; height: 34px; text-align: center; vertical-align: middle;
+      font-size: 16px; font-weight: bold; cursor: pointer;
+      border: 1px solid #444; background: #1e1e34; color: #e0e0e0;
+    }
+    .sv-grid td:hover { background: #2a2a44; }
+    .sv-grid td.given { color: #888; cursor: default; background: #161630; }
+    .sv-grid td.selected { background: #2a3a5a; border-color: #7eb8ff; }
+    .sv-grid td.box-border-right { border-right: 2px solid #aaa; }
+    .sv-grid tr.box-border-bottom td { border-bottom: 2px solid #aaa; }
+    .sv-numpad { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; max-width: 240px; }
+    .sv-numpad .num-btn { width: 32px; height: 32px; font-size: 14px; }
+
+    .sv-btn {
+      padding: 6px 14px; font-size: 13px; font-family: inherit;
+      background: rgba(231, 76, 60, 0.15); color: #e74c3c;
+      border: 1px solid rgba(231, 76, 60, 0.3); border-radius: 4px;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .sv-btn:hover { background: rgba(231, 76, 60, 0.3); }
+
     /* PvP menu buttons */
     .pvp-btn {
       padding: 6px 14px; font-size: 13px; font-family: inherit;
@@ -606,6 +647,7 @@
   <script src="bgm.js"></script>
   <script src="i18n.js"></script>
   <script src="pvp.js"></script>
+  <script src="survivor.js"></script>
   <script src="game.js"></script>
 </body>
 </html>
