@@ -662,11 +662,17 @@ function startLevel(level) {
   game.sudokuSolution = solution.map(row => [...row]);
   game.playerGrid = puzzle.map(row => [...row]);     // Starts with givens, player fills rest
 
-  // Spawn monsters at distance from player
-  for (let i = 0; i < config.monsterCount; i++) {
-    const pos = findSpawnPosition(5);
-    const m = createMonster(i, pos.x, pos.y, config.monsterSpeed);
-    // Stagger initial movement so they don't all move on the exact same frame
+  // Spawn monsters with varied types
+  var monsterTypes = [];
+  if (config.monsterCount >= 1) monsterTypes.push('chaser');
+  if (config.monsterCount >= 2) monsterTypes.push('patrol');
+  if (config.monsterCount >= 3) monsterTypes.push('sprinter');
+  // Extra monsters beyond 3 are chasers
+  for (var i = monsterTypes.length; i < config.monsterCount; i++) monsterTypes.push('chaser');
+
+  for (var i = 0; i < config.monsterCount; i++) {
+    var pos = findSpawnPosition(5);
+    var m = createTypedMonster(monsterTypes[i], i, pos.x, pos.y, config.monsterSpeed);
     m.moveTimer = i * 0.3;
     game.monsters.push(m);
   }
@@ -750,8 +756,8 @@ function update(dt) {
   // 2. Player movement
   updatePlayerMovement(dt);
 
-  // 3. Monster movement
-  updateMonsters(game.monsters, dt, game.playerTileX, game.playerTileY, game.tileMap, game.iceWalls);
+  // 3. Monster movement (type-aware)
+  updateAllMonsters(game.monsters, dt, game.playerTileX, game.playerTileY, game.tileMap, game.iceWalls);
 
   // 4. Wrong answer boost decay
   updateWrongAnswerBoost(game.monsters, dt);

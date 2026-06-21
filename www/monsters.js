@@ -414,3 +414,202 @@ function updateWrongAnswerBoost(monsters, dt) {
 function isWrongAnswerBoostActive() {
   return wrongAnswerBoostActive;
 }
+
+// ---- Multi-Type Monster System ----
+
+/**
+ * Create a monster with a specific type.
+ * @param {string} type - 'chaser' (default), 'patrol', 'sprinter'
+ */
+function createTypedMonster(type, id, tileX, tileY, speed) {
+  var m = createMonster(id, tileX, tileY, speed);
+  m.type = type;
+
+  if (type === 'patrol') {
+    // Generate 3 patrol waypoints near spawn
+    m.patrolPoints = [{x: tileX, y: tileY}];
+    for (var i = 0; i < 2; i++) {
+      var attempts = 0;
+      while (attempts < 20) {
+        var wx = tileX + Math.floor(Math.random() * 7) - 3;
+        var wy = tileY + Math.floor(Math.random() * 7) - 3;
+        if (wx >= 1 && wx < MAP_COLS - 1 && wy >= 1 && wy < MAP_ROWS - 1) {
+          m.patrolPoints.push({x: wx, y: wy});
+          break;
+        }
+        attempts++;
+      }
+    }
+    m.patrolIdx = 0;
+    m.patrolDir = 1;
+    m.alertTimer = 0;
+    m.state = 'patrolling';
+    m.color = '#7eb8ff';  // Blue
+    m.speed = speed * 0.8; // Patrol slightly slower
+    m.moveInterval = 1.0 / m.speed;
+  }
+
+  if (type === 'sprinter') {
+    m.state = 'chasing';
+    m.color = '#f39c12';  // Orange
+    m.speed = speed * 2.0; // 2x faster
+    m.moveInterval = 1.0 / m.speed;
+    m.sprintDir = {dx: Math.random() > 0.5 ? 1 : -1, dy: 0};
+    if (Math.random() > 0.5) m.sprintDir = {dx: 0, dy: Math.random() > 0.5 ? 1 : -1};
+  }
+
+  return m;
+}
+
+/**
+ * Update patrol monster: walk between waypoints. Alert when player is close.
+ */
+function updatePatrolMonster(m, dt, playerTileX, playerTileY, tileMap, iceWalls) {
+  if (m.state === 'stunned' || m.state === 'frozen') {
+    m.stateTimer -= dt;
+    if (m.stateTimer <= 0) { m.state = 'patrolling'; m.stateTimer = 0; }
+    return;
+  }
+
+  // Check player proximity
+  var dist = Math.abs(m.tileX - playerTileX) + Math.abs(m.tileY - playerTileY);
+
+  if (dist <= 3 && m.state === 'patrolling') {
+    // Player too close — switch to chasing
+    m.state = 'chasing';
+    m.alertTimer = 5.0;
+    m.moveCooldown = 0;
+  }
+
+  if (m.state === 'chasing') {
+    m.alertTimer -= dt;
+    // Chase player using A*
+    m.moveCooldown -= dt;
+    if (m.moveCooldown <= 0) {
+      var newPath = astar(m.tileX, m.tileY, playerTileX, playerTileY, tileMap, iceWalls);
+      if (newPath && newPath.length > 1) { m.path = newPath; m.pathIndex = 1; }
+      m.moveCooldown = 0.3;
+    }
+    // Move along path
+    m.moveTimer -= dt;
+    if (m.moveTimer <= 0 && m.path.length > 0 && m.pathIndex < m.path.length) {
+      var t = m.path[m.pathIndex];
+      if (tileMap[t.y][t.x] === 0 && !iceWalls.some(function(w){return w.x===t.x&&w.y===t.y;})) {
+        m.tileX = t.x; m.tileY = t.y; m.x = t.x * TILE_SIZE; m.y = t.y * TILE_SIZE; m.pathIndex++;
+      } else { m.path = []; m.pathIndex = 0; m.moveCooldown = 0; }
+      m.moveTimer += m.moveInterval;
+    }
+    // Return to patrol if player is far or timer expires
+    if (dist > 5 || m.alertTimer <= 0) {
+      m.state = 'patrolling';
+      m.path = [];
+      m.pathIndex = 0;
+    }
+    return;
+  }
+
+  // Patrol: walk between waypoints
+  if (m.patrolPoints.length < 2) return;
+  m.moveTimer -= dt;
+  if (m.moveTimer <= 0) {
+    var target = m.patrolPoints[m.patrolIdx];
+    if (m.tileX === target.x && m.tileY === target.y) {
+      // Reached waypoint — move to next
+      m.patrolIdx += m.patrolDir;
+      if (m.patrolIdx >= m.patrolPoints.length) { m.patrolIdx = m.patrolPoints.length - 2; m.patrolDir = -1; }
+      if (m.patrolIdx < 0) { m.patrolIdx = 1; m.patrolDir = 1; }
+      target = m.patrolPoints[m.patrolIdx];
+    }
+    // Move one tile toward target
+    var dx = Math.sign(target.x - m.tileX);
+    var dy = Math.sign(target.y - m.tileY);
+    // Prefer the axis with larger distance
+    if (Math.abs(target.x - m.tileX) < Math.abs(target.y - m.tileY)) dx = 0;
+    else if (Math.abs(target.y - m.tileY) < Math.abs(target.x - m.tileX)) dy = 0;
+    var nx = m.tileX + dx, ny = m.tileY + dy;
+    if (nx >= 0 && nx < MAP_COLS && ny >= 0 && ny < MAP_ROWS && tileMap[ny][nx] === 0 &&
+        !iceWalls.some(function(w){return w.x===nx&&w.y===ny;})) {
+      m.tileX = nx; m.tileY = ny; m.x = nx * TILE_SIZE; m.y = ny * TILE_SIZE;
+    }
+    m.moveTimer += m.moveInterval;
+  }
+}
+
+/**
+ * Update sprint monster: moves in straight lines at high speed.
+ * Bounces off walls. Charges player when aligned.
+ */
+function updateSprintMonster(m, dt, playerTileX, playerTileY, tileMap, iceWalls) {
+  if (m.state === 'stunned' || m.state === 'frozen') {
+    m.stateTimer -= dt;
+    if (m.stateTimer <= 0) { m.state = 'chasing'; m.stateTimer = 0; }
+    return;
+  }
+
+  m.moveTimer -= dt;
+  if (m.moveTimer <= 0) {
+    // Check if aligned with player (same row or col, no wall between)
+    var charge = false;
+    if (m.tileY === playerTileY) {
+      var minC = Math.min(m.tileX, playerTileX), maxC = Math.max(m.tileX, playerTileX);
+      var blocked = false;
+      for (var c = minC + 1; c < maxC; c++) {
+        if (tileMap[m.tileY][c] === 1) { blocked = true; break; }
+      }
+      if (!blocked) { m.sprintDir = {dx: Math.sign(playerTileX - m.tileX), dy: 0}; charge = true; }
+    } else if (m.tileX === playerTileX) {
+      var minR = Math.min(m.tileY, playerTileY), maxR = Math.max(m.tileY, playerTileY);
+      var blocked = false;
+      for (var r = minR + 1; r < maxR; r++) {
+        if (tileMap[r][m.tileX] === 1) { blocked = true; break; }
+      }
+      if (!blocked) { m.sprintDir = {dx: 0, dy: Math.sign(playerTileY - m.tileY)}; charge = true; }
+    }
+
+    if (charge) m.moveInterval = (1.0 / m.speed) * 0.5; // Even faster when charging
+    else m.moveInterval = 1.0 / m.speed;
+
+    // Try to move in sprint direction
+    var nx = m.tileX + m.sprintDir.dx;
+    var ny = m.tileY + m.sprintDir.dy;
+    var isWalkable = function(x, y) {
+      if (x < 0 || x >= MAP_COLS || y < 0 || y >= MAP_ROWS) return false;
+      if (tileMap[y][x] === 1) return false;
+      if (iceWalls.some(function(w){return w.x===x&&w.y===y;})) return false;
+      return true;
+    };
+
+    if (isWalkable(nx, ny)) {
+      m.tileX = nx; m.tileY = ny; m.x = nx * TILE_SIZE; m.y = ny * TILE_SIZE;
+    } else {
+      // Bounce — pick a new random direction
+      var dirs = [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}];
+      var valid = dirs.filter(function(d) {
+        return isWalkable(m.tileX + d.dx, m.tileY + d.dy) &&
+               !(d.dx === -m.sprintDir.dx && d.dy === -m.sprintDir.dy); // Don't reverse
+      });
+      if (valid.length > 0) {
+        m.sprintDir = valid[Math.floor(Math.random() * valid.length)];
+        m.tileX += m.sprintDir.dx; m.tileY += m.sprintDir.dy;
+        m.x = m.tileX * TILE_SIZE; m.y = m.tileY * TILE_SIZE;
+      } else {
+        // Stuck — reverse
+        m.sprintDir = {dx: -m.sprintDir.dx, dy: -m.sprintDir.dy};
+      }
+    }
+    m.moveTimer += m.moveInterval;
+  }
+}
+
+/**
+ * Type-aware monster update. Call instead of the generic updateMonsters
+ * for the multi-type system.
+ */
+function updateAllMonsters(monsters, dt, playerTileX, playerTileY, tileMap, iceWalls) {
+  for (var i = 0; i < monsters.length; i++) {
+    var m = monsters[i];
+    if (m.type === 'patrol') updatePatrolMonster(m, dt, playerTileX, playerTileY, tileMap, iceWalls);
+    else if (m.type === 'sprinter') updateSprintMonster(m, dt, playerTileX, playerTileY, tileMap, iceWalls);
+    else updateMonsters([m], dt, playerTileX, playerTileY, tileMap, iceWalls);
+  }
+}
