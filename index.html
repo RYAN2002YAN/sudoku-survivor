@@ -288,6 +288,63 @@
       animation: blink 1.2s ease-in-out infinite;
     }
 
+    /* ============================================================
+       PvP MODE
+       ============================================================ */
+    #pvp-container { display: none; width: 100%; }
+    #pvp-top-bar {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 30px;
+      padding: 6px 12px;
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+    #pvp-timer { font-size: 24px; font-weight: bold; color: #ffd700; }
+    #pvp-winner-msg { font-size: 16px; font-weight: bold; }
+    #pvp-quit {
+      background: none; border: 1px solid #444; color: #888;
+      font-size: 16px; cursor: pointer; padding: 4px 10px; border-radius: 4px;
+    }
+    #pvp-quit:hover { color: #f44; border-color: #f44; }
+    #pvp-boards { display: flex; gap: 12px; justify-content: center; align-items: flex-start; }
+    .pvp-side { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .pvp-side h3 { font-size: 14px; color: #aaa; margin: 0; }
+    .pvp-progress { color: #2ecc71; }
+    .pvp-divider { width: 2px; background: #2a2a4a; min-height: 300px; }
+    .pvp-grid { border-collapse: collapse; border: 2px solid #888; }
+    .pvp-grid td {
+      width: 38px; height: 38px;
+      text-align: center; vertical-align: middle;
+      font-size: 18px; font-weight: bold; cursor: pointer;
+      border: 1px solid #444; background: #1e1e34; color: #e0e0e0;
+      transition: background 0.1s;
+    }
+    .pvp-grid td:hover { background: #2a2a44; }
+    .pvp-grid td.given { color: #888; cursor: default; background: #161630; }
+    .pvp-grid td.selected { background: #2a3a5a; border-color: #7eb8ff; box-shadow: inset 0 0 8px rgba(126,184,255,0.3); }
+    .pvp-grid td.wrong-flash { animation: wrongShake 0.4s ease; background: #4a2020; border-color: #ff4757; }
+    .pvp-grid td.correct-flash { animation: correctPulse 0.4s ease; background: #1a3a1a; border-color: #2ecc71; }
+    .pvp-grid td.box-border-right { border-right: 2px solid #aaa; }
+    .pvp-grid tr.box-border-bottom td { border-bottom: 2px solid #aaa; }
+    .pvp-numpad { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; max-width: 300px; }
+    .pvp-numpad .num-btn { width: 36px; height: 36px; font-size: 15px; }
+
+    /* PvP menu buttons */
+    .pvp-btn {
+      padding: 6px 14px; font-size: 13px; font-family: inherit;
+      background: rgba(46, 204, 113, 0.15); color: #2ecc71;
+      border: 1px solid rgba(46, 204, 113, 0.3); border-radius: 4px;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .pvp-btn:hover { background: rgba(46, 204, 113, 0.3); }
+
+    /* ============================================================
+       DIFFICULTY
+       ============================================================ */
     /* Difficulty selector */
     .difficulty-selector {
       display: flex;
@@ -548,6 +605,7 @@
   <script src="sound.js"></script>
   <script src="bgm.js"></script>
   <script src="i18n.js"></script>
+  <script src="pvp.js"></script>
   <script src="game.js"></script>
 </body>
 </html>

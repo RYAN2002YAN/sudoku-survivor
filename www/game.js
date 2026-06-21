@@ -361,6 +361,15 @@ function handleKeyDown(e) {
     return;
   }
 
+  // PvP mode: route number keys to Player 1
+  if (game.state === 'pvp' && e.code >= 'Digit1' && e.code <= 'Digit9') {
+    var pvpVal = parseInt(e.code.replace('Digit', ''));
+    if (pvpVal <= PvP.size) {
+      pvpHandleKey(1, pvpVal.toString());
+      return;
+    }
+  }
+
   // Number keys 1-9: fill selected Sudoku cell
   const maxDigit = game.gridSize === 6 ? 'Digit6' : 'Digit9';
   if (e.code >= 'Digit1' && e.code <= maxDigit) {
@@ -388,13 +397,16 @@ function handleKeyDown(e) {
       return;
     }
     if (game.state === 'gameover' || game.state === 'levelclear') {
-      // Go back to menu from game over / level clear
       stopAllGameTimers();
       game.state = 'menu';
       game.tileMap = null;
       hideOverlay();
       buildMenuOverlay();
       BGM.setScene('menu');
+      return;
+    }
+    if (game.state === 'pvp') {
+      pvpQuit();
       return;
     }
     // Default: deselect Sudoku cell
@@ -727,16 +739,18 @@ function gameLoop(timestamp) {
   // Cap frame time to prevent spiral of death
   if (frameTime > MAX_FRAME_TIME) frameTime = MAX_FRAME_TIME;
 
-  if (game.state === 'playing') {
+  if (game.state === 'playing' || game.state === 'pvp') {
     game.accumulator += frameTime;
 
     while (game.accumulator >= FIXED_TIMESTEP) {
-      update(FIXED_TIMESTEP);
+      if (game.state === 'playing') update(FIXED_TIMESTEP);
+      else if (game.state === 'pvp') pvpUpdate(FIXED_TIMESTEP);
       game.accumulator -= FIXED_TIMESTEP;
     }
   }
 
-  render();
+  if (game.state === 'pvp') renderPvPCanvas();
+  else render();
   requestAnimationFrame(gameLoop);
 }
 
@@ -1070,11 +1084,13 @@ function buildMenuOverlay() {
     return `<button class="${active}" data-grid="${g.size}">${label}</button>`;
   }).join('');
 
+  var pvpLabel = lang === 'zh' ? '⚔️ 本地双人对战' : '⚔️ Local PvP';
   overlay.innerHTML = `
     <h1 data-i18n="menu.title">${I18n.t('menu.title').replace('\n', '<br>')}</h1>
     <div class="subtitle" data-i18n="menu.subtitle">${I18n.t('menu.subtitle').replace(/\n/g, '<br>')}</div>
     <div class="difficulty-selector">${gridButtons}</div>
     <div class="difficulty-selector">${diffButtons}</div>
+    <div class="difficulty-selector"><button class="pvp-btn" id="pvp-start-btn">${pvpLabel}</button></div>
     <div class="key-hint" data-i18n="menu.start">${I18n.t('menu.start')}</div>
     <div style="font-size:12px;color:#666;margin-top:6px;">${I18n.t('esc.menu')} &nbsp;|&nbsp; 🌐 ${I18n.getLang() === 'zh' ? '中→EN' : 'EN→中'} &nbsp;|&nbsp; 🔊</div>
   `;
@@ -1109,6 +1125,18 @@ function buildMenuOverlay() {
       }
     });
   });
+
+  // PvP button
+  var pvpBtn = overlay.querySelector('#pvp-start-btn');
+  if (pvpBtn) {
+    pvpBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      SoundManager.init();
+      BGM.start('playing');
+      pvpInit(game.gridSize, game.gridSize === 6 ? 12 : 27);
+      game.state = 'pvp';
+    });
+  }
 }
 
 function setDifficulty(diff) {
@@ -1262,6 +1290,56 @@ function renderSudoku() {
 }
 
 // ---- Canvas Rendering ----
+
+function renderPvPCanvas() {
+  var ctx = game.ctx;
+  var canvas = game.canvas;
+  ctx.fillStyle = '#0a0a14';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // PvP Arena background
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Title
+  ctx.fillStyle = '#ffd700';
+  ctx.font = '22px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('⚔️ ARENA ⚔️', canvas.width / 2, 50);
+
+  // Player labels
+  ctx.fillStyle = '#2ecc71';
+  ctx.font = '16px monospace';
+  ctx.fillText('PLAYER 1', canvas.width / 4, canvas.height / 2 - 20);
+  ctx.fillText('PLAYER 2', canvas.width * 3 / 4, canvas.height / 2 - 20);
+
+  // Keyboard hints
+  ctx.fillStyle = '#888';
+  ctx.font = '12px monospace';
+  ctx.fillText('Keyboard 1-6', canvas.width / 4, canvas.height / 2 + 10);
+  ctx.fillText('Mouse click', canvas.width * 3 / 4, canvas.height / 2 + 10);
+
+  // VS
+  ctx.fillStyle = '#ff4757';
+  ctx.font = '28px monospace';
+  ctx.fillText('VS', canvas.width / 2, canvas.height / 2);
+
+  // Timer
+  var mins = Math.floor(PvP.timer / 60);
+  var secs = Math.floor(PvP.timer % 60);
+  ctx.fillStyle = '#ffd700';
+  ctx.font = '18px monospace';
+  ctx.fillText(mins + ':' + (secs < 10 ? '0' : '') + secs, canvas.width / 2, canvas.height - 30);
+
+  // Winner banner
+  if (PvP.winner) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(0, canvas.height / 2 - 40, canvas.width, 60);
+    ctx.fillStyle = '#ffd700';
+    ctx.font = '24px monospace';
+    ctx.fillText('PLAYER ' + PvP.winner + ' WINS!', canvas.width / 2, canvas.height / 2 + 5);
+  }
+}
 
 function render() {
   const ctx = game.ctx;
