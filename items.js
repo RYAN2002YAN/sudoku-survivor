@@ -6,7 +6,7 @@
 
 var ITEM_DEFS = {
   apple: {
-    emoji: '🍎', color: '#ff4757',
+    emoji: '🍎', color: '#ef4444',
     name: { en: 'Apple', zh: '苹果' },
     type: 'instant',
     apply: function () {

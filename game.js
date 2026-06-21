@@ -1082,7 +1082,7 @@ function buildMenuOverlay() {
     <div class="difficulty-selector">${gridButtons}</div>
     <div class="difficulty-selector">${diffButtons}</div>
     <div class="key-hint" data-i18n="menu.start">${I18n.t('menu.start')}</div>
-    <div style="font-size:12px;color:#666;margin-top:6px;">${I18n.t('esc.menu')} &nbsp;|&nbsp; 🌐 ${I18n.getLang() === 'zh' ? '中→EN' : 'EN→中'} &nbsp;|&nbsp; 🔊</div>
+    <div style="font-size:12px;color:#64748b;margin-top:6px;">${I18n.t('esc.menu')} &nbsp;|&nbsp; 🌐 ${I18n.getLang() === 'zh' ? '中→EN' : 'EN→中'} &nbsp;|&nbsp; 🔊</div>
   `;
   overlay.classList.remove('hidden');
 
@@ -1128,14 +1128,14 @@ function buildLevelClearOverlay() {
   overlay.className = 'levelclear';
   var lang = I18n.getLang();
   var escText = I18n.t('esc.menu');
-  overlay.innerHTML = '<h2 style=\"color:#2ecc71;\">' + I18n.t('levelclear.title') + '</h2>' +
+  overlay.innerHTML = '<h2 style=\"color:#10b981;\">' + I18n.t('levelclear.title') + '</h2>' +
     '<div class=\"subtitle\">' +
       I18n.t('stat.level') + ': ' + game.level + '<br>' +
       I18n.t('stat.score') + ': ' + game.score + '<br>' +
       I18n.t('stat.time') + ': ' + formatTime(game.timer) +
     '</div>' +
     '<div class=\"key-hint\" id=\"auto-advance\">' + I18n.t('levelclear.next') + ' 3s...</div>' +
-    '<div class=\"key-hint\" style=\"font-size:13px;color:#aaa;animation:none;margin-top:6px;\">' + escText + '</div>';
+    '<div class=\"key-hint\" style=\"font-size:13px;color:#94a3b8;animation:none;margin-top:6px;\">' + escText + '</div>';
   overlay.classList.remove('hidden');
 }
 
@@ -1157,14 +1157,14 @@ function showGameOverOverlay() {
   var lang = I18n.getLang();
   var diffLabel = diffCfg.label[lang] || diffCfg.label.en;
   var escText = I18n.t('esc.menu');
-  overlay.innerHTML = '<h2 style=\"color:#ff4757;\">' + I18n.t('gameover.title') + '</h2>' +
+  overlay.innerHTML = '<h2 style=\"color:#ef4444;\">' + I18n.t('gameover.title') + '</h2>' +
     '<div class=\"subtitle\">' +
       I18n.t('gameover.level') + ': ' + game.level + ' &nbsp; (' + diffLabel + ')<br>' +
       I18n.t('gameover.score') + ': ' + game.score + '<br>' +
       I18n.t('gameover.time') + ': ' + formatTime(game.timer) +
     '</div>' +
     '<div class=\"key-hint\">' + I18n.t('gameover.restart') + '</div>' +
-    '<div class=\"key-hint\" style=\"font-size:13px;color:#aaa;animation:none;margin-top:6px;\">' + escText + '</div>';
+    '<div class=\"key-hint\" style=\"font-size:13px;color:#94a3b8;animation:none;margin-top:6px;\">' + escText + '</div>';
   overlay.classList.remove('hidden');
 }
 
@@ -1221,7 +1221,7 @@ function updateUI() {
   ['rows-done', 'cols-done', 'boxes-done'].forEach(id => {
     const el = document.getElementById(id);
     if (el && parseInt(el.textContent) === 6) {
-      el.style.color = '#2ecc71';
+      el.style.color = '#10b981';
     } else {
       el.style.color = '';
     }
@@ -1271,18 +1271,18 @@ function renderSudoku() {
 // ---- Canvas Rendering ----
 
 function render() {
-  const ctx = game.ctx;
-  const canvas = game.canvas;
+  var ctx = game.ctx;
+  var canvas = game.canvas;
 
-  // Clear
-  ctx.fillStyle = '#0a0a14';
+  // Clear — match body gradient base
+  ctx.fillStyle = '#0f172a';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   if (!game.tileMap) {
-    // No map yet — draw placeholder
-    ctx.fillStyle = '#1a1a2e';
+    // No map yet — placeholder
+    ctx.fillStyle = '#1e293b';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#444';
+    ctx.fillStyle = '#64748b';
     ctx.font = '14px monospace';
     ctx.textAlign = 'center';
     ctx.fillText('Loading...', canvas.width / 2, canvas.height / 2);
@@ -1290,43 +1290,39 @@ function render() {
   }
 
   // Layer 1: Floor and wall tiles
-  for (let row = 0; row < MAP_ROWS; row++) {
-    for (let col = 0; col < MAP_COLS; col++) {
-      const px = col * TILE_SIZE;
-      const py = row * TILE_SIZE;
-      const tile = game.tileMap[row][col];
+  for (var row = 0; row < MAP_ROWS; row++) {
+    for (var col = 0; col < MAP_COLS; col++) {
+      var px = col * TILE_SIZE;
+      var py = row * TILE_SIZE;
+      var tile = game.tileMap[row][col];
 
       if (tile === 0) {
-        // Floor — subtle checkerboard for depth
-        const shade = (row + col) % 2 === 0 ? '#1e1e38' : '#1a1a32';
-        ctx.fillStyle = shade;
+        // Floor — subtle checkerboard
+        ctx.fillStyle = (row + col) % 2 === 0 ? '#1a2740' : '#162032';
       } else {
         // Wall
-        ctx.fillStyle = '#3a3a4a';
+        ctx.fillStyle = '#334155';
       }
       ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
 
-      // Subtle grid line
-      ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+      // Grid line
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.05)';
       ctx.strokeRect(px, py, TILE_SIZE, TILE_SIZE);
     }
   }
 
-  // Layer 1.5: Item pickups on floor
+  // Layer 1.5: Items
   renderItems(ctx);
 
   // Layer 2: Ice walls
-  for (const wall of game.iceWalls) {
-    const px = wall.x * TILE_SIZE;
-    const py = wall.y * TILE_SIZE;
-
-    // Ice block
-    const alpha = Math.min(0.9, 0.5 + wall.timer / 5.0 * 0.4);
-    ctx.fillStyle = `rgba(100, 180, 255, ${alpha})`;
+  for (var i = 0; i < game.iceWalls.length; i++) {
+    var wall = game.iceWalls[i];
+    var px = wall.x * TILE_SIZE;
+    var py = wall.y * TILE_SIZE;
+    var alpha = Math.min(0.9, 0.5 + wall.timer / 5.0 * 0.4);
+    ctx.fillStyle = 'rgba(125, 211, 252, ' + alpha + ')';
     ctx.fillRect(px + 1, py + 1, TILE_SIZE - 2, TILE_SIZE - 2);
-
-    // Ice crystal pattern
-    ctx.strokeStyle = `rgba(200, 230, 255, ${alpha})`;
+    ctx.strokeStyle = 'rgba(186, 230, 253, ' + alpha + ')';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(px + TILE_SIZE / 2, py + 4);
@@ -1334,85 +1330,71 @@ function render() {
     ctx.moveTo(px + 4, py + TILE_SIZE / 2);
     ctx.lineTo(px + TILE_SIZE - 4, py + TILE_SIZE / 2);
     ctx.stroke();
-    ctx.lineWidth = 1;
   }
 
   // Layer 3: Monsters
-  for (const m of game.monsters) {
-    const px = m.tileX * TILE_SIZE;
-    const py = m.tileY * TILE_SIZE;
-    const size = TILE_SIZE - 4;
+  for (var j = 0; j < game.monsters.length; j++) {
+    var m = game.monsters[j];
+    var mx = m.tileX * TILE_SIZE;
+    var my = m.tileY * TILE_SIZE;
+    var msize = TILE_SIZE - 4;
 
-    // Body color based on state
-    let bodyColor = '#e74c3c'; // Red (chasing)
+    var bodyColor = '#ef4444'; // Slate-red for chasing
     if (m.state === 'stunned') {
-      bodyColor = (Math.floor(Date.now() / 150) % 2 === 0) ? '#f1c40f' : '#e67e22'; // Yellow-orange flash
+      bodyColor = (Math.floor(Date.now() / 150) % 2 === 0) ? '#f59e0b' : '#d97706';
     } else if (m.state === 'frozen') {
-      bodyColor = (Math.floor(Date.now() / 200) % 2 === 0) ? '#3498db' : '#2980b9'; // Blue flash
+      bodyColor = (Math.floor(Date.now() / 200) % 2 === 0) ? '#38bdf8' : '#0ea5e9';
     }
 
     ctx.fillStyle = bodyColor;
-    ctx.fillRect(px + 2, py + 2, size, size);
+    ctx.fillRect(mx + 2, my + 2, msize, msize);
 
-    // Eyes (white)
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(px + 7, py + 6, 7, 7);
-    ctx.fillRect(px + 18, py + 6, 7, 7);
+    // Eyes
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(mx + 7, my + 6, 7, 7);
+    ctx.fillRect(mx + 18, my + 6, 7, 7);
+    // Pupils
+    var edx = Math.sign(game.playerTileX - m.tileX) * 2;
+    var edy = Math.sign(game.playerTileY - m.tileY) * 2;
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(mx + 9 + edx, my + 8 + edy, 3, 3);
+    ctx.fillRect(mx + 20 + edx, my + 8 + edy, 3, 3);
 
-    // Pupils (black) — look toward player
-    const eyeDX = Math.sign(game.playerTileX - m.tileX) * 2;
-    const eyeDY = Math.sign(game.playerTileY - m.tileY) * 2;
-    ctx.fillStyle = '#000';
-    ctx.fillRect(px + 9 + eyeDX, py + 8 + eyeDY, 3, 3);
-    ctx.fillRect(px + 20 + eyeDX, py + 8 + eyeDY, 3, 3);
-
-    // State indicator
-    if (m.state === 'stunned') {
-      // Stars above head
-      ctx.fillStyle = '#f1c40f';
-      ctx.font = '10px monospace';
-      ctx.fillText('⚡', px + TILE_SIZE / 2 - 5, py - 2);
-    } else if (m.state === 'frozen') {
-      ctx.fillStyle = '#3498db';
-      ctx.font = '10px monospace';
-      ctx.fillText('❄️', px + TILE_SIZE / 2 - 5, py - 2);
-    }
+    // State icon
+    if (m.state === 'stunned') { ctx.fillStyle = '#fbbf24'; ctx.font = '10px monospace'; ctx.fillText('⚡', mx + TILE_SIZE/2 - 5, my - 2); }
+    if (m.state === 'frozen') { ctx.fillStyle = '#7dd3fc'; ctx.font = '10px monospace'; ctx.fillText('❄️', mx + TILE_SIZE/2 - 5, my - 2); }
   }
 
   // Layer 4: Player
-  const ppx = game.playerTileX * TILE_SIZE;
-  const ppy = game.playerTileY * TILE_SIZE;
-  const psize = TILE_SIZE - 4;
+  var ppx = game.playerTileX * TILE_SIZE;
+  var ppy = game.playerTileY * TILE_SIZE;
+  var psize = TILE_SIZE - 4;
 
   // Invulnerability flashing
   if (game.invulnTimer > 0 && Math.floor(Date.now() / 120) % 2 === 0) {
     ctx.globalAlpha = 0.4;
   }
 
-  // Body
-  ctx.fillStyle = '#2ecc71';
+  // Body — emerald
+  ctx.fillStyle = '#10b981';
   ctx.fillRect(ppx + 2, ppy + 2, psize, psize);
 
-  // Direction indicator (small triangle or eyes)
-  ctx.fillStyle = '#fff';
-  const eyeCX = ppx + TILE_SIZE / 2;
-  const eyeCY = ppy + TILE_SIZE / 2;
-  // Draw eyes looking in movement direction
-  const lookX = game.lastMoveDir.dx * 5;
-  const lookY = game.lastMoveDir.dy * 5;
-  ctx.fillRect(ppx + 7 + lookX, ppy + 6 + lookY, 6, 5);
-  ctx.fillRect(ppx + 19 + lookX, ppy + 6 + lookY, 6, 5);
-  ctx.fillStyle = '#000';
-  ctx.fillRect(ppx + 9 + lookX, ppy + 7 + lookY, 2, 3);
-  ctx.fillRect(ppx + 21 + lookX, ppy + 7 + lookY, 2, 3);
+  // Eyes
+  ctx.fillStyle = '#f8fafc';
+  var lx = game.lastMoveDir.dx * 5;
+  var ly = game.lastMoveDir.dy * 5;
+  ctx.fillRect(ppx + 7 + lx, ppy + 6 + ly, 6, 5);
+  ctx.fillRect(ppx + 19 + lx, ppy + 6 + ly, 6, 5);
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(ppx + 9 + lx, ppy + 7 + ly, 2, 3);
+  ctx.fillRect(ppx + 21 + lx, ppy + 7 + ly, 2, 3);
 
   ctx.globalAlpha = 1.0;
 
   // Layer 5: Wrong-answer boost indicator
   if (typeof wrongAnswerBoostActive !== 'undefined' && wrongAnswerBoostActive) {
-    // Red border pulse around the canvas
-    const pulse = Math.sin(Date.now() / 100) * 0.3 + 0.5;
-    ctx.strokeStyle = `rgba(255, 70, 70, ${pulse})`;
+    var pulse = Math.sin(Date.now() / 100) * 0.3 + 0.5;
+    ctx.strokeStyle = 'rgba(239, 68, 68, ' + pulse + ')';
     ctx.lineWidth = 3;
     ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
     ctx.lineWidth = 1;
