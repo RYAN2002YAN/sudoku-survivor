@@ -278,6 +278,7 @@ const game = {
   invulnTimer: 0,
   lastMoveDir: { dx: 0, dy: -1 }, // Default facing up
   moveCooldown: 0,     // seconds between tile moves (prevents too-fast movement)
+  playerMoveMultiplier: 1.0, // 1.0 = normal, 0.5 = 2x speed (speed boots)
 
   // Dungeon
   tileMap: null,
@@ -622,6 +623,7 @@ function startLevel(level) {
   game.invulnTimer = 0;
   game.moveCooldown = 0;
   game.lastMoveDir = { dx: 0, dy: -1 };
+  resetItems();
   game.completed = makeCompletedArrays(game.gridSize);
   game.selectedCell = { row: -1, col: -1 };
   game.effectMsg = '';
@@ -809,6 +811,10 @@ function update(dt) {
   // Map distance to intensity: dist 1 → 1.0, dist 5+ → 0.0
   const newIntensity = minDist <= 1 ? 1.0 : minDist >= 6 ? 0.0 : 1 - (minDist - 1) / 5;
   BGM.setIntensity(newIntensity);
+
+  // 12. Item system update + pickup detection
+  itemsUpdate(dt);
+  checkItemPickup();
 }
 
 // ---- Player Movement ----
@@ -842,7 +848,7 @@ function updatePlayerMovement(dt) {
   game.playerTileY = newTileY;
   game.playerPixelX = newTileX * TILE_SIZE;
   game.playerPixelY = newTileY * TILE_SIZE;
-  game.moveCooldown = PLAYER_MOVE_INTERVAL;
+  game.moveCooldown = PLAYER_MOVE_INTERVAL * (game.playerMoveMultiplier || 1.0);
 }
 
 // ---- Collision Detection ----
@@ -1354,6 +1360,9 @@ function render() {
       ctx.strokeRect(px, py, TILE_SIZE, TILE_SIZE);
     }
   }
+
+  // Layer 1.5: Item pickups on floor
+  renderItems(ctx);
 
   // Layer 2: Ice walls
   for (const wall of game.iceWalls) {
