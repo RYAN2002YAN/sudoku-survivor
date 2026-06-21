@@ -361,20 +361,6 @@ function handleKeyDown(e) {
     return;
   }
 
-  // Survivor mode: route movement + number keys
-  if (game.state === 'survivor') {
-    if (survivorHandleKey(e, true)) return;
-  }
-
-  // PvP mode: route number keys to Player 1
-  if (game.state === 'pvp' && e.code >= 'Digit1' && e.code <= 'Digit9') {
-    var pvpVal = parseInt(e.code.replace('Digit', ''));
-    if (pvpVal <= PvP.size) {
-      pvpHandleKey(1, pvpVal.toString());
-      return;
-    }
-  }
-
   // Number keys 1-9: fill selected Sudoku cell
   const maxDigit = game.gridSize === 6 ? 'Digit6' : 'Digit9';
   if (e.code >= 'Digit1' && e.code <= maxDigit) {
@@ -410,8 +396,6 @@ function handleKeyDown(e) {
       BGM.setScene('menu');
       return;
     }
-    if (game.state === 'pvp') { pvpQuit(); return; }
-    if (game.state === 'survivor') { survivorQuit(); return; }
     // Default: deselect Sudoku cell
     game.selectedCell = { row: -1, col: -1 };
     renderSudoku();
@@ -420,7 +404,6 @@ function handleKeyDown(e) {
 }
 
 function handleKeyUp(e) {
-  if (game.state === 'survivor') { survivorHandleKey(e, false); return; }
   const idx = heldDirections.findIndex(d => d.code === e.code);
   if (idx >= 0) heldDirections.splice(idx, 1);
 }
@@ -743,20 +726,16 @@ function gameLoop(timestamp) {
   // Cap frame time to prevent spiral of death
   if (frameTime > MAX_FRAME_TIME) frameTime = MAX_FRAME_TIME;
 
-  if (game.state === 'playing' || game.state === 'pvp' || game.state === 'survivor') {
+  if (game.state === 'playing') {
     game.accumulator += frameTime;
 
     while (game.accumulator >= FIXED_TIMESTEP) {
-      if (game.state === 'playing') update(FIXED_TIMESTEP);
-      else if (game.state === 'pvp') pvpUpdate(FIXED_TIMESTEP);
-      else if (game.state === 'survivor') survivorUpdate(FIXED_TIMESTEP);
+      update(FIXED_TIMESTEP);
       game.accumulator -= FIXED_TIMESTEP;
     }
   }
 
-  if (game.state === 'pvp') renderPvPCanvas();
-  else if (game.state === 'survivor') { /* Canvas rendered in survivorUpdate */ }
-  else render();
+  render();
   requestAnimationFrame(gameLoop);
 }
 
@@ -1090,17 +1069,11 @@ function buildMenuOverlay() {
     return `<button class="${active}" data-grid="${g.size}">${label}</button>`;
   }).join('');
 
-  var pvpLabel = lang === 'zh' ? '⚔️ 斗兽场：双人竞速' : '⚔️ Arena: Race';
-  var svLabel = lang === 'zh' ? '💀 幸存者：地牢对决' : '💀 Survivor: Dungeon Duel';
   overlay.innerHTML = `
     <h1 data-i18n="menu.title">${I18n.t('menu.title').replace('\n', '<br>')}</h1>
     <div class="subtitle" data-i18n="menu.subtitle">${I18n.t('menu.subtitle').replace(/\n/g, '<br>')}</div>
     <div class="difficulty-selector">${gridButtons}</div>
     <div class="difficulty-selector">${diffButtons}</div>
-    <div class="difficulty-selector">
-      <button class="pvp-btn" id="pvp-start-btn">${pvpLabel}</button>
-      <button class="sv-btn" id="sv-start-btn">${svLabel}</button>
-    </div>
     <div class="key-hint" data-i18n="menu.start">${I18n.t('menu.start')}</div>
     <div style="font-size:12px;color:#666;margin-top:6px;">${I18n.t('esc.menu')} &nbsp;|&nbsp; 🌐 ${I18n.getLang() === 'zh' ? '中→EN' : 'EN→中'} &nbsp;|&nbsp; 🔊</div>
   `;
@@ -1136,29 +1109,6 @@ function buildMenuOverlay() {
     });
   });
 
-  // PvP button
-  var pvpBtn = overlay.querySelector('#pvp-start-btn');
-  if (pvpBtn) {
-    pvpBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      SoundManager.init();
-      BGM.start('playing');
-      pvpInit(game.gridSize, game.gridSize === 6 ? 12 : 27);
-      game.state = 'pvp';
-    });
-  }
-
-  // Survivor button
-  var svBtn = overlay.querySelector('#sv-start-btn');
-  if (svBtn) {
-    svBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      SoundManager.init();
-      BGM.start('playing');
-      survivorInit(game.gridSize, game.gridSize === 6 ? 12 : 27);
-      game.state = 'survivor';
-    });
-  }
 }
 
 function setDifficulty(diff) {
