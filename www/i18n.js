@@ -15,7 +15,7 @@ const I18n = (() => {
       'stat.time': 'Time',
 
       // Menu overlay
-      'menu.title': 'SUDOKU\nSURVIVOR',
+      'menu.title': 'SUDOKU SURVIVOR',
       'menu.subtitle': `Solve the 6×6 Sudoku while
 escaping monsters in the dungeon.
 
@@ -63,7 +63,7 @@ Wrong answer → Monsters speed up!`,
       'stat.time': '时间',
 
       // 菜单覆盖层
-      'menu.title': '数独\n逃生',
+      'menu.title': '数独 逃生',
       'menu.subtitle': `一边躲避地牢怪物
 一边解开 6×6 数独。
 

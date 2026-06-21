@@ -1066,7 +1066,7 @@ function buildMenuOverlay() {
 
   // Title area — always visible
   html += '<div style="text-align:center;z-index:1;position:relative;">';
-  html += '<h1 class="menu-title-main">' + I18n.t('menu.title').replace('\n', '<br>') + '</h1>';
+  html += '<h1 class="menu-title-main">' + I18n.t('menu.title') + '</h1>';
   html += '<div class="menu-title-sub">SUDOKU SURVIVOR</div>';
   html += '<div class="menu-title-desc">' + (lang === 'zh' ? '一边躲避地牢怪物，一边解开数独' : 'Solve Sudoku while escaping dungeon monsters') + '</div>';
   html += '</div>';
